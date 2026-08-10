@@ -1,0 +1,143 @@
+schema_version: 1
+run_id: qg-20260810-persistence-execution-v02-run-005
+contract_id: qg-20260810-persistence-execution-v02
+contract_path: quality/contracts/qg-20260810-persistence-execution-v02.yaml
+contract_sha256: f389abd334a7746c491c5fb618c535ac9c624edea2cf8bfb73cf9caac1a5aa66
+goal: >-
+  Establish PERSONAL OS Persistence & Execution Foundation v0.2 with PostgreSQL as
+  the production-semantic reference database and durable, recoverable event delivery,
+  while preserving every accepted Foundation v0.1 invariant.
+milestone: foundation-v0.2-persistence-execution
+started_at: "2026-08-10T23:44:00Z"
+status: ACTIVE
+builder_ids:
+  - root-builder
+repository_revision: 3ae6d6d325ddeab5b049c737ef4574388c4a4440
+workspace_state: uncommitted
+lineage:
+  predecessor_run_id: qg-20260810-persistence-execution-v02-run-004
+  predecessor_contract_id: qg-20260810-persistence-execution-v02
+  escalation_resolution_ref: docs/HANDOFF.md
+  carried_failure_keys:
+    - recovery-advisory-lock-unbounded-wait
+  resolved_failure_keys: []
+references:
+  - PROJECT_MANIFEST.yaml
+  - docs/ARCHITECTURE.md
+  - docs/DATA_AND_MEMORY_MODEL.md
+  - docs/AUTONOMY_AND_APPROVALS.md
+  - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+  - docs/decisions/0012-postgresql-outbox-execution.md
+  - docs/decisions/0013-canonical-events-and-fenced-execution.md
+  - quality/runs/qg-20260810-persistence-execution-v02-run-004.yaml
+  - checklists/PERSISTENCE_EXECUTION_V0_2.md
+baseline:
+  summary: >-
+    Run 004 exhausted its fixed three-repair budget after actual hosted CI, truthful claim
+    history, and fail-closed handler-envelope binding reduced the vector from [0,1,3,0]
+    to [0,0,1,0]. All four reviewers found no P0/P1. The sole carried P2 is PostgreSQL
+    recovery's unbounded advisory-lock wait, tied to mandatory CAP-007; exact final-tree
+    hosted execution also remains required after that repair.
+  quality_vector: [0, 0, 1, 0]
+  checks:
+    - criterion_id: CAP-001
+      command: npm.cmd run verify:postgresql
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        PostgreSQL 17.10 passed clean zero-to-0008, populated accepted-0005-to-0008,
+        repeat migration, two fixture loads, and fourteen tests.
+    - criterion_id: CAP-007
+      command: PostgreSQL recovery advisory-lock contention probe
+      exit_code: 0
+      result: FAIL
+      evidence: >-
+        PostgreSQL reports lock_timeout=0 and a same-key recovery waiter remains blocked
+        until the holding transaction releases its advisory lock.
+    - criterion_id: CAP-010
+      command: GitHub Actions run 31441487067
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        The hosted PostgreSQL and full-regression path passed on pushed candidate SHA
+        3ae6d6d; later repairs still require fresh exact-tree coverage before acceptance.
+    - criterion_id: REG-001
+      command: npm.cmd run verify
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        The run-005 baseline worktree passed safety, lint, strict types, 76 backend unit
+        tests, one frontend test, 38 integration tests, build, validators, continuity,
+        and both mock/synthetic demos with live_capabilities empty.
+iterations:
+  - number: 1
+    primary_failure_id: PE-F-011
+    repair:
+      author_id: root-builder
+      summary: >-
+        Bounded PostgreSQL command-receipt advisory-lock acquisition with a 500 ms
+        transaction-local timeout inside a savepoint, translated SQLSTATE 55P03 to a typed
+        retryable conflict, and retained the outer transaction for a correlated authorized
+        deferral or non-enumerating authorization denial audit.
+      references:
+        - backend/src/personal_os/domain/errors.py
+        - backend/src/personal_os/adapters/persistence/repositories.py
+        - backend/src/personal_os/worker.py
+        - backend/tests/postgresql/test_postgresql_persistence.py
+    before:
+      quality_vector: [0, 0, 1, 0]
+      evidence: >-
+        PostgreSQL reported lock_timeout=0 and a same-key recovery waiter remained blocked
+        until the holding transaction released its advisory lock.
+    after:
+      quality_vector: [0, 0, 0, 0]
+      evidence: >-
+        Authorized contention exits within the 500 ms bound, records a correlated deferred
+        audit without a receipt or recovery transition, and the same command succeeds after
+        release. Wrong-actor contention remains a non-enumerating audited denial.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-007
+        command: npm.cmd run verify:postgresql
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Clean/populated/repeat migrations, two fixtures, and all sixteen PostgreSQL tests
+          passed, including authorized timeout/retry and wrong-actor non-disclosure.
+      - criterion_id: CAP-007
+        command: npm.cmd run test:execution
+        exit_code: 0
+        result: PASS
+        evidence: Nineteen local execution scenarios remain green.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run verify
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Safety over 172 candidates, lint, strict types, 76 backend unit tests, one
+          frontend test, 38 integration tests, build, validators, continuity, and demos
+          passed in 30.7 seconds with live_capabilities empty.
+final_checks: []
+reviewers: []
+failures:
+  - id: PE-F-011
+    failure_key: recovery-advisory-lock-unbounded-wait
+    discovered_iteration: 0
+    criterion_ids: [CAP-007]
+    severity: P2
+    status: RESOLVED
+    attempts: 1
+    resolved_iteration: 1
+    summary: >-
+      Recovery's transaction-scoped PostgreSQL advisory lock has no scoped timeout, so a
+      wedged open transaction can leave an operator request waiting indefinitely.
+    resolution: >-
+      A 500 ms transaction-local lock timeout is isolated by a savepoint. SQLSTATE 55P03
+      becomes a typed conflict only after current authorization, with correlated audit and
+      no receipt/transition; release permits safe retry with the same key.
+    risk_tags: [architecture, agent-autonomy]
+remaining_risks: []
+final_disposition: null
+completed_at: null

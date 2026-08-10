@@ -248,3 +248,48 @@ baseline/tag and v0.2 branch, and running GitHub Actions. Run
 | Ignore-boundary inspection | pass | `.env`, `.venv`, `node_modules`, frontend build output, PostgreSQL runtime/password state, backend test work, logs, and local databases resolve to explicit `.gitignore` rules. |
 | Run-004 pre-push `npm.cmd run verify` | 0 | In 34.0 seconds, safety over 171 candidates, lint, strict types, 76 backend unit tests, one frontend test, 29 integration tests, production build, structural CI/quality/continuity validation, and both mock/synthetic demos passed; `live_capabilities` remained empty. |
 | `npm.cmd run audit:dependencies` with advisory-service access | 0 | Pip-audit and npm audit found no known third-party vulnerabilities; the editable local `personal-os` project was explicitly skipped because it is not a PyPI package. |
+| Candidate commit and push | success | Commit `3ae6d6d325ddeab5b049c737ef4574388c4a4440` was created on `foundation-v0.2-persistence-execution`; unchanged `main`, annotated tag `foundation-v0.1-accepted`, and the candidate branch were pushed to the authorized origin. |
+| [GitHub Actions run 31441487067](https://github.com/Esse247/personal-os/actions/runs/31441487067) | success | Hosted push run attempt 1 completed from `2026-08-10T23:13:21Z` to `23:15:05Z` on exact candidate SHA `3ae6d6d325ddeab5b049c737ef4574388c4a4440`. |
+| Hosted `postgresql-verification` job 93626945997 | success | PostgreSQL container initialization, dependency installation, CI-contract validation, `npm run verify:postgresql`, `npm run verify`, cleanup, and container stop all completed successfully. This is actual hosted PostgreSQL evidence for CAP-010, not local or structural substitution. |
+| Run-004 iteration 2 claim-history repair | retained | Claim and reclaim transitions now record `preauthorization:execution-claim-v1`; delivered history remains `allowed:execution-delivery-v1`, so lease acquisition no longer masquerades as a policy decision. |
+| `npm.cmd run test:execution` | 0 | Ten local scenarios pass with exact ordered policy-result assertions. |
+| `npm.cmd run verify:postgresql` | 0 | In 12.9 seconds, clean/populated/repeat migrations, two fixtures, and all 14 PostgreSQL tests pass with claim/reclaim/delivery history assertions. |
+| Post-repair `npm.cmd run verify` | 0 | In 30.4 seconds, complete safety, lint, strict types, 76 backend unit, one frontend, 29 integration, build, quality, continuity, and demo verification passes; `live_capabilities` remains empty. |
+
+## 2026-08-11 - Run-004 handler-envelope repair and escalation
+
+Retained iteration 3 resolves `handler-effect-envelope-binding-unvalidated`. Trusted
+consumer, event, owner, canonical payload, effect identifier, and timestamp values are
+snapshotted before handler invocation and reused for validation, receipt, delivery, and
+audit. Run 004 then stops at its fixed budget with vector `[0, 0, 1, 0]`; the only
+unresolved finding is the mandatory-CAP-007 advisory-lock timeout P2.
+
+| Command, probe, or review | Exit/result | Material evidence |
+|---|---:|---|
+| `npm.cmd run test:execution` | 0 | Nineteen scenarios pass. Eight direct/input mutations and one stateful-consumer attack fail as terminal `handler-envelope-invalid`, with no effect or receipt and with failed transition/audit. |
+| Focused adversarial execution selection | 0 | Nine focused cases passed; mutable payload and shifting consumer values are compared against pre-handler snapshots. |
+| Standalone `npm.cmd run verify:postgresql` with three explicit synthetic local URLs | 0 | In 12.7 seconds, PostgreSQL 17.10 passed clean zero-to-0008, populated 0005-to-0008, repeat migration, two fixtures, and all 14 tests. An earlier URL-less invocation refused to run and was not counted as PostgreSQL evidence. |
+| Current-tree `npm.cmd run verify` | 0 | In 31.5 seconds, safety over 171 candidates, lint, strict types, 76 backend unit tests, one frontend test, 38 integration tests, build, validators, continuity, and demos passed; `live_capabilities` is empty. |
+| REV-001 `faraday-persistence-architecture-r004-20260811-0135-7c91` | ACCEPT | Accepted v0.1 migrations/ADRs remain unchanged; isolated clean/populated PostgreSQL and nine adversarial cases pass. No P0/P1 architecture finding; PE-F-008 resolved. |
+| REV-002 `concurrency-reliability-r4-20260811-0034` | ACCEPT | Isolated 14-test PostgreSQL and nine-case handler probes pass with exact atomic failure history. A waiter probe reports `lock_timeout=0` and blocks until holder release, confirming PE-F-011 as P2 rather than P1. |
+| REV-003 `security-authorization-r4-20260811-0032` | ACCEPT | Independent mutable-payload and stateful-consumer probes persist zero effects/receipts and a typed denial audit. Replay, owner, credential, and no-live boundaries remain green; no P0/P1. |
+| REV-004 `anscombe-milestone-r004-20260811-0042` | REJECT / ESCALATE | CAP-001 through CAP-006, CAP-008 through CAP-010, REG-001 through REG-005, and REV-001 through REV-003 pass. CAP-007 fails only because its mandatory timeout P2 remains after budget exhaustion. |
+| Run-004 completion | `COMPLETE / ESCALATE` | Completed at `2026-08-10T23:43:00Z`, not PASS. Hosted run 31441487067 remains authentic evidence for pushed SHA `3ae6d6d`, but it predates iterations 2-3 and is not described as final-tree coverage. |
+| Run-005 successor creation | recorded | `qg-20260810-persistence-execution-v02-run-005` preserves exact run-004 lineage, fixed contract SHA-256 `f389abd334a7746c491c5fb618c535ac9c624edea2cf8bfb73cf9caac1a5aa66`, baseline `[0, 0, 1, 0]`, and the sole stable failure key `recovery-advisory-lock-unbounded-wait`. |
+
+## 2026-08-11 - Run-005 bounded recovery-lock repair
+
+Retained iteration 1 resolves `recovery-advisory-lock-unbounded-wait` without changing the
+accepted Foundation baseline, migrations, provider mode, capability status, or v0.2 scope.
+PostgreSQL receipt-key serialization now uses a 500 ms transaction-local timeout inside a
+savepoint. Only lock-timeout SQLSTATE `55P03` is translated; the outer transaction remains
+usable for current authorization and correlated audit.
+
+| Command or check | Exit/result | Material evidence |
+|---|---:|---|
+| Initial 15-test PostgreSQL run | 1 | The new holder/waiter behavior, zero partial writes, and deferred audit all worked; one assertion used a stale policy-rule spelling. Only the test expectation changed. |
+| Final `npm.cmd run verify:postgresql` | 0 | In 14.4 seconds, clean/populated/repeat migrations, two fixtures, and 16 PostgreSQL tests pass. Authorized contention times out, audits deferral, writes no receipt/transition, and succeeds with the same key after release; wrong-actor contention remains a non-enumerating audited denial. |
+| `npm.cmd run test:execution` | 0 | All 19 local execution scenarios remain green. |
+| Backend Ruff and mypy | 0 | Sixty-two files are formatted/clean and all 61 strict-typed source/test files pass. |
+| Current-tree `npm.cmd run verify` | 0 | In 30.7 seconds, safety over 172 candidates, lint, strict types, 76 backend unit tests, one frontend test, 38 integration tests, build, validators, continuity, and both mock/synthetic demos pass; `live_capabilities` is empty. |
+| Run-005 iteration 1 | retained | Quality vector improves from `[0, 0, 1, 0]` to `[0, 0, 0, 0]`; no known unresolved failure remains. Fresh exact-commit hosted CI and final independent reviews are still required. |

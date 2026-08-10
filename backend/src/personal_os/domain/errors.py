@@ -27,5 +27,9 @@ class ConflictError(DomainError):
     code = "conflict"
 
 
+class LockTimeoutError(ConflictError):
+    code = "lock_timeout"
+
+
 class ProhibitedCapabilityError(DomainError):
     code = "prohibited_capability"

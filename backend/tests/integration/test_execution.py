@@ -104,6 +104,80 @@ class AlwaysRetryHandler:
         raise RetryableExecutionError("synthetic-transient")
 
 
+class AdversarialEffectHandler:
+    consumer_name = "internal-redacted-projection-v1"
+    mode = "internal-mock-only"
+    action_level = 3
+
+    def __init__(self, mutation: str) -> None:
+        self.mutation = mutation
+
+    def build_effect(
+        self, event: OutboxEvent, *, effect_id: str, occurred_at: datetime
+    ) -> InternalEffect:
+        if self.mutation == "input_payload":
+            event.payload["state"] = "forged-state"
+        payload = {
+            "event_type": event.event_type.value,
+            "aggregate_type": event.aggregate_type,
+            "state": event.payload.get("state"),
+        }
+        values = {
+            "id": effect_id,
+            "consumer_name": self.consumer_name,
+            "event_id": event.id,
+            "owner_user_id": event.owner_user_id,
+            "effect_type": "internal.redacted_event_projection.v1",
+            "occurred_at": occurred_at,
+            "payload": payload,
+        }
+        if self.mutation == "id":
+            values["id"] = "forged-effect-id"
+        elif self.mutation == "consumer":
+            values["consumer_name"] = "forged-consumer"
+        elif self.mutation == "event":
+            values["event_id"] = "forged-event-id"
+        elif self.mutation == "owner":
+            values["owner_user_id"] = OTHER_USER_ID
+        elif self.mutation == "effect_type":
+            values["effect_type"] = "external.unregistered.v1"
+        elif self.mutation == "occurred_at":
+            values["occurred_at"] = occurred_at + timedelta(seconds=1)
+        elif self.mutation == "payload":
+            values["payload"] = {**payload, "state": "forged-state"}
+        return InternalEffect(**values)  # type: ignore[arg-type]
+
+
+class ShiftingConsumerHandler:
+    mode = "internal-mock-only"
+    action_level = 3
+
+    def __init__(self) -> None:
+        self.consumer_reads = 0
+
+    @property
+    def consumer_name(self) -> str:
+        self.consumer_reads += 1
+        return "lookup-consumer" if self.consumer_reads == 1 else "effect-consumer"
+
+    def build_effect(
+        self, event: OutboxEvent, *, effect_id: str, occurred_at: datetime
+    ) -> InternalEffect:
+        return InternalEffect(
+            id=effect_id,
+            consumer_name=self.consumer_name,
+            event_id=event.id,
+            owner_user_id=event.owner_user_id,
+            effect_type="internal.redacted_event_projection.v1",
+            occurred_at=occurred_at,
+            payload={
+                "event_type": event.event_type.value,
+                "aggregate_type": event.aggregate_type,
+                "state": event.payload.get("state"),
+            },
+        )
+
+
 class RevokedBeforeEffectPolicy(FoundationPolicy):
     def __init__(self) -> None:
         super().__init__()
@@ -249,14 +323,89 @@ def test_processor_atomically_records_one_effect_receipt_audit_and_delivery(
         ).scalars()
         assert "execution.event_delivered" in set(actions)
         transitions = connection.execute(
-            select(OutboxTransitionRow.transition)
+            select(OutboxTransitionRow.transition, OutboxTransitionRow.policy_result)
             .where(OutboxTransitionRow.event_id == result.event_id)
             .order_by(OutboxTransitionRow.sequence)
-        ).scalars()
+        ).all()
         assert list(transitions) == [
-            OutboxTransitionType.CLAIMED.value,
-            OutboxTransitionType.DELIVERED.value,
+            (
+                OutboxTransitionType.CLAIMED.value,
+                "preauthorization:execution-claim-v1",
+            ),
+            (
+                OutboxTransitionType.DELIVERED.value,
+                "allowed:execution-delivery-v1",
+            ),
         ]
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "id",
+        "consumer",
+        "event",
+        "owner",
+        "effect_type",
+        "occurred_at",
+        "payload",
+        "input_payload",
+    ],
+)
+def test_adversarial_handler_effect_envelope_fails_closed_atomically(
+    engine: Engine,
+    mutation: str,
+) -> None:
+    seed_application_events(engine)
+    handler: InternalEventHandler = AdversarialEffectHandler(mutation)
+    result = OutboxProcessor(
+        uow_factory=create_uow_factory(engine),
+        handlers={event_type: handler for event_type in InternalEventType},
+        environment="test",
+    ).process_one()
+
+    assert result.status == OutboxStatus.FAILED.value
+    assert result.failure_code == "handler-envelope-invalid"
+    with engine.connect() as connection:
+        assert connection.execute(select(func.count(InternalEffectRow.id))).scalar_one() == 0
+        assert connection.execute(select(func.count(ConsumerReceiptRow.event_id))).scalar_one() == 0
+        assert (
+            connection.execute(
+                select(OutboxEventRow.last_failure_code).where(OutboxEventRow.id == result.event_id)
+            ).scalar_one()
+            == "handler-envelope-invalid"
+        )
+        denial = connection.execute(
+            select(AuditEventRow.outcome, AuditEventRow.policy_result).where(
+                AuditEventRow.entity_id == result.event_id,
+                AuditEventRow.action == "execution.event_failed",
+            )
+        ).one()
+    assert denial == ("failed", "denied:handler-envelope-invalid")
+
+
+def test_handler_consumer_binding_is_snapshotted_once_before_invocation(engine: Engine) -> None:
+    seed_application_events(engine)
+    shifting_handler = ShiftingConsumerHandler()
+    handler: InternalEventHandler = shifting_handler
+    result = OutboxProcessor(
+        uow_factory=create_uow_factory(engine),
+        handlers={event_type: handler for event_type in InternalEventType},
+        environment="test",
+    ).process_one()
+
+    assert shifting_handler.consumer_reads == 2
+    assert result.status == OutboxStatus.FAILED.value
+    assert result.failure_code == "handler-envelope-invalid"
+    with engine.connect() as connection:
+        assert connection.execute(select(func.count(InternalEffectRow.id))).scalar_one() == 0
+        assert connection.execute(select(func.count(ConsumerReceiptRow.event_id))).scalar_one() == 0
+        assert (
+            connection.execute(
+                select(OutboxEventRow.status).where(OutboxEventRow.id == result.event_id)
+            ).scalar_one()
+            == OutboxStatus.FAILED.value
+        )
 
 
 def test_duplicate_consumer_delivery_is_suppressed_without_a_second_effect(

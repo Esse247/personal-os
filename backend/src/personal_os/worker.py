@@ -22,7 +22,9 @@ from personal_os.domain.entities import AuditEvent, CommandReceipt
 from personal_os.domain.errors import (
     AuthorizationError,
     ConflictError,
+    LockTimeoutError,
     ProhibitedCapabilityError,
+    ValidationError,
 )
 from personal_os.domain.events import (
     ConsumerReceipt,
@@ -148,6 +150,10 @@ class RetryableExecutionError(RuntimeError):
         self.failure_code = failure_code
 
 
+class InvalidHandlerEnvelopeError(RuntimeError):
+    """A registered handler returned an effect outside its claimed event envelope."""
+
+
 class OutboxProcessor:
     """Fenced, policy-gated processor for the one local v0.2 internal effect."""
 
@@ -252,6 +258,13 @@ class OutboxProcessor:
                 retryable=False,
                 policy_result="denied:authorization-revoked",
             )
+        except InvalidHandlerEnvelopeError:
+            return self._record_failure(
+                event,
+                "handler-envelope-invalid",
+                retryable=False,
+                policy_result="denied:handler-envelope-invalid",
+            )
         except ConflictError:
             return ProcessingResult(event.id, "stale", "stale-lease")
         except Exception:
@@ -269,15 +282,50 @@ class OutboxProcessor:
             if event is None:
                 raise AuthorizationError("resource not found")
 
-            # PostgreSQL exact retries can wait on this transaction-scoped key lock. Make
-            # the policy decision after that wait and immediately before reading or
-            # disclosing the durable receipt so revoked authority cannot replay a result.
-            uow.receipts.lock_key(command.idempotency_key)
             context = AuthContext(
                 command.user_id,
                 "recover failed internal event",
                 environment=self.environment,
             )
+            # PostgreSQL exact retries serialize on this transaction-scoped key lock. The
+            # repository bounds that wait and preserves this outer transaction through a
+            # savepoint so an authorized timeout remains visible and auditable. The policy
+            # decision stays after the wait and immediately before any receipt disclosure.
+            try:
+                uow.receipts.lock_key(command.idempotency_key)
+            except LockTimeoutError as exc:
+                timeout_decision = self.policy.decide(
+                    context,
+                    FoundationPolicy.RECOVER_PERMISSION,
+                    self._resource(event),
+                )
+                if not timeout_decision.allowed:
+                    self._append_audit(
+                        uow,
+                        event,
+                        action="execution.recovery_denied",
+                        outcome="denied",
+                        policy_result=f"denied:{timeout_decision.rule_id}",
+                        actor_id=command.user_id,
+                        failure_code="recovery-authorization-denied",
+                        correlation_id=command.correlation_id,
+                        causation_id=command.idempotency_key,
+                    )
+                    uow.commit()
+                    raise AuthorizationError("resource not found") from exc
+                self._append_audit(
+                    uow,
+                    event,
+                    action="execution.recovery_deferred",
+                    outcome="failed",
+                    policy_result=f"allowed:{timeout_decision.rule_id}",
+                    actor_id=command.user_id,
+                    failure_code="recovery-lock-timeout",
+                    correlation_id=command.correlation_id,
+                    causation_id=command.idempotency_key,
+                )
+                uow.commit()
+                raise
             decision = self.policy.decide(
                 context,
                 FoundationPolicy.RECOVER_PERMISSION,
@@ -361,26 +409,48 @@ class OutboxProcessor:
             decision = self._handle_decision(event)
             if not decision.allowed:
                 raise AuthorizationError("resource not found")
-            existing = uow.consumer_receipts.get(handler.consumer_name, event.id)
+            consumer_name = handler.consumer_name
+            event_id = event.id
+            owner_user_id = event.owner_user_id
+            state = event.payload.get("state")
+            expected_payload = {
+                "event_type": event.event_type.value,
+                "aggregate_type": event.aggregate_type,
+                "state": state if isinstance(state, str) else None,
+            }
+            existing = uow.consumer_receipts.get(consumer_name, event_id)
             duplicate = existing is not None
             if existing is None:
                 occurred_at = self.clock()
-                effect = handler.build_effect(
-                    event,
-                    effect_id=self.id_factory(),
+                effect_id = self.id_factory()
+                try:
+                    effect = handler.build_effect(
+                        event,
+                        effect_id=effect_id,
+                        occurred_at=occurred_at,
+                    )
+                except ValidationError as exc:
+                    raise InvalidHandlerEnvelopeError from exc
+                self._validate_effect_binding(
+                    effect,
+                    effect_id=effect_id,
+                    consumer_name=consumer_name,
+                    event_id=event_id,
+                    owner_user_id=owner_user_id,
                     occurred_at=occurred_at,
+                    expected_payload=expected_payload,
                 )
                 uow.internal_effects.add(effect)
                 uow.consumer_receipts.add(
                     ConsumerReceipt(
-                        consumer_name=handler.consumer_name,
-                        event_id=event.id,
+                        consumer_name=consumer_name,
+                        event_id=event_id,
                         effect_id=effect.id,
                         processed_at=occurred_at,
                     )
                 )
             delivered = uow.outbox.mark_delivered(
-                event.id,
+                event_id,
                 self.lease_owner,
                 self._lease_token(claimed),
                 duplicate_suppressed=duplicate,
@@ -393,10 +463,32 @@ class OutboxProcessor:
                 ),
                 outcome="succeeded",
                 policy_result=f"allowed:{decision.rule_id}",
-                consumer_name=handler.consumer_name,
+                consumer_name=consumer_name,
             )
             uow.commit()
-            return ProcessingResult(event.id, "delivered")
+            return ProcessingResult(event_id, "delivered")
+
+    @staticmethod
+    def _validate_effect_binding(
+        effect: InternalEffect,
+        *,
+        effect_id: str,
+        consumer_name: str,
+        event_id: str,
+        owner_user_id: str,
+        occurred_at: datetime,
+        expected_payload: Mapping[str, str | int | bool | None],
+    ) -> None:
+        if not isinstance(effect, InternalEffect) or (
+            effect.id != effect_id
+            or effect.consumer_name != consumer_name
+            or effect.event_id != event_id
+            or effect.owner_user_id != owner_user_id
+            or effect.effect_type != "internal.redacted_event_projection.v1"
+            or effect.occurred_at != occurred_at
+            or effect.payload != expected_payload
+        ):
+            raise InvalidHandlerEnvelopeError
 
     def _record_failure(
         self,

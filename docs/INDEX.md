@@ -30,7 +30,7 @@ Start with `../PROJECT_MANIFEST.yaml`; it is the compact machine-readable map an
 - [Persistence & Execution Foundation v0.2 checklist](../checklists/PERSISTENCE_EXECUTION_V0_2.md)
 - [Quality gauntlet protocol](../quality/README.md)
 - [Current quality contract](../quality/contracts/qg-20260810-persistence-execution-v02.yaml)
-- [Current quality run](../quality/runs/qg-20260810-persistence-execution-v02-run-004.yaml)
+- [Current quality run](../quality/runs/qg-20260810-persistence-execution-v02-run-005.yaml)
 
 ## Command map
 

@@ -5,8 +5,8 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from sqlalchemy import Engine, and_, desc, func, or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Engine, and_, desc, func, or_, select, text, update
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from personal_os.adapters.persistence.models import (
@@ -347,6 +347,8 @@ class SqlBlockRepository:
 
 
 class SqlCommandReceiptRepository:
+    LOCK_TIMEOUT_MS = 500
+
     def __init__(self, session: Session) -> None:
         self.session = session
 
@@ -389,9 +391,22 @@ class SqlCommandReceiptRepository:
         if not idempotency_key.strip():
             raise ValueError("idempotency key cannot be empty")
         if self.session.get_bind().dialect.name == "postgresql":
-            self.session.execute(
-                select(func.pg_advisory_xact_lock(func.hashtextextended(idempotency_key, 1)))
-            )
+            try:
+                with self.session.begin_nested():
+                    self.session.execute(
+                        text(f"SET LOCAL lock_timeout = '{self.LOCK_TIMEOUT_MS}ms'")
+                    )
+                    self.session.execute(
+                        select(
+                            func.pg_advisory_xact_lock(func.hashtextextended(idempotency_key, 1))
+                        )
+                    )
+            except DBAPIError as exc:
+                if getattr(exc.orig, "sqlstate", None) == "55P03":
+                    from personal_os.domain.errors import LockTimeoutError
+
+                    raise LockTimeoutError("recovery command is temporarily busy; retry") from exc
+                raise
 
 
 class SqlApprovalRepository:
@@ -822,7 +837,7 @@ class SqlOutboxRepository:
             now,
             worker_id=worker_id,
             lease_token=row.lease_token,
-            policy_result="allowed:execution-claim-v1",
+            policy_result="preauthorization:execution-claim-v1",
         )
         self.session.flush()
         return self._map(row)

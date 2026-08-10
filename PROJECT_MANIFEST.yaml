@@ -71,7 +71,7 @@ quality:
   protocol: quality/README.md
   agents_policy: quality/agents-policy.yaml
   current_contract: quality/contracts/qg-20260810-persistence-execution-v02.yaml
-  current_run: quality/runs/qg-20260810-persistence-execution-v02-run-004.yaml
+  current_run: quality/runs/qg-20260810-persistence-execution-v02-run-005.yaml
   contracts: quality/contracts
   runs: quality/runs
   rubrics: quality/rubrics

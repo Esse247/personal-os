@@ -1,10 +1,10 @@
 # Build status
 
 - **Current phase:** Persistence & Execution Foundation v0.2
-- **Status:** Successor Quality Gauntlet run 004 active; v0.2 is not accepted
+- **Status:** Successor Quality Gauntlet run 005 active; v0.2 is not accepted
 - **Accepted capability baseline:** Foundation v0.1 at `foundation-v0.1-accepted`
 - **Capability mode:** Local, mock-only, synthetic-data-only; no live capability
-- **Last updated:** 2026-08-10
+- **Last updated:** 2026-08-11
 
 ## Accepted baseline
 
@@ -43,57 +43,46 @@ provider mode, capability status, or authority level.
 - `npm.cmd run verify:postgresql` exits 0: clean zero-to-0008 migration, populated accepted
   0005-to-0008 preservation, second no-op upgrade, two idempotent fixture loads, and 14
   PostgreSQL tests pass.
-- Three author-independent reviewers reran the PostgreSQL path on isolated database names;
-  each passed the populated upgrade, clean bootstrap, fixtures, and 13-test suite.
+- Run-004 reviewers reran the PostgreSQL path on isolated database names; clean and
+  populated migrations, fixtures, and all 14 PostgreSQL tests passed.
 - `npm.cmd run verify` exits 0: repository safety, Ruff/ESLint, strict Python/TypeScript,
-  76 backend unit tests, one frontend test, 29 SQLite integration tests, production build,
+  76 backend unit tests, one frontend test, 38 SQLite integration tests, production build,
   CI-contract/quality/continuity validators, and both mock/synthetic demo flows pass.
-- `npm.cmd run test:execution` exits 0 with 10 passed; `npm.cmd run
+- `npm.cmd run test:execution` exits 0 with 19 passed; `npm.cmd run
   test:dialect-boundaries` exits 0 with 8 passed.
-- Independent security recheck `security-authorization-r3-recheck-20260810-2340` accepts
-  PE-F-010: allow-then-revoke replay makes two policy decisions, discloses no result after
-  revocation, retains one receipt/transition, and appends the correlated denial audit.
+- Independent architecture, concurrency, and security reviewers accept the handler repair:
+  nine direct/stateful attacks fail as `handler-envelope-invalid`, with zero effect/receipt,
+  unchanged stored payload, and atomic failed transition/audit.
 - `npm.cmd run audit:dependencies` exits 0 with no known third-party vulnerability; the
   editable local `personal-os` package is explicitly skipped because it is not on PyPI.
 - The demo reports `live_capabilities: []`. The user-authorized empty GitHub destination
-  is reachable; origin configuration, branch push, and the first hosted CI result remain
-  pending in run 004.
+  now contains the unchanged accepted main/tag and candidate branch. GitHub Actions run
+  `31441487067` completed successfully on candidate commit `3ae6d6d325ddeab5b049c737ef4574388c4a4440`.
 
 ## Quality disposition
 
-Run `qg-20260810-persistence-execution-v02-run-002` is frozen as
-`COMPLETE / ESCALATE`, not PASS. Persistent-goal continuation authorized bounded successor
-run `qg-20260810-persistence-execution-v02-run-003`; its iteration-zero vector is
-`[0, 2, 2, 0]`. Retained iteration 1 resolves exact recovery replay reauthorization and
-improves the vector to `[0, 1, 2, 0]`. Iteration 2 honestly records no change on hosted CI
-and the newly reviewed P2, leaving the final vector `[0, 1, 3, 0]`.
+Runs 002, 003, and 004 are frozen `COMPLETE / ESCALATE`, never PASS. Run 004 used its
+fixed three repairs to resolve actual hosted CI, truthful preauthorization history, and
+handler-envelope binding. Its vector improved from `[0, 1, 3, 0]` to `[0, 0, 1, 0]`.
 
-Run-002 independent decisions remain historical input, not run-003 acceptance:
+Run-004 independent decisions are:
 
 - persistence architecture: ACCEPT, no P0/P1;
 - concurrency and reliability: ACCEPT, no P0/P1;
-- security and authorization: REJECT;
+- security and authorization: ACCEPT, no P0/P1;
 - final milestone acceptance: REJECT and ESCALATE.
 
-No P0 exists. One P1 blocker remains: CAP-010 requires an actual successful hosted
-PostgreSQL CI run, while only the workflow contract and local equivalent have executed.
-The repository has no remote, and no remote has been configured or pushed.
+The sole blocker is P2 `recovery-advisory-lock-unbounded-wait`, tied to mandatory CAP-007.
+PostgreSQL reports `lock_timeout=0`, and an independent waiter remained blocked until its
+holder released the advisory lock. This is an availability/recovery-latency risk, not a
+demonstrated authority bypass, duplicate effect, corruption, data loss, or lock cycle.
 
-Three P2 hardening findings remain: claim history uses an allowed label before the first
-policy decision; handler-produced effects are not independently bound to the claimed
-event/owner/consumer envelope before persistence; and PostgreSQL recovery advisory-lock
-acquisition has no scoped timeout for a wedged open transaction.
-
-Run 003 is frozen `COMPLETE / ESCALATE`. Current persistence-architecture,
-concurrency/reliability, and security reviewers accept with no P0/P1 finding in their
-scopes; milestone reviewer `anscombe-milestone-r003-20260810-2253` rejects and escalates
-because mandatory CAP-010 lacks an actual hosted run. Persistence & Execution Foundation
-v0.2 is not complete or accepted. No pilot,
-production, live-provider, real-data, autonomous-specialist, or external-action claim is
-authorized.
-
-Run `qg-20260810-persistence-execution-v02-run-004` is active at iteration zero with exact
-run-003 lineage and baseline vector `[0, 1, 3, 0]`. The user has supplied the empty GitHub
-destination and explicit authority to commit, configure origin, push the accepted baseline
-and v0.2 branch, and run Actions. CAP-010 remains P1 until an actual hosted PostgreSQL
-result succeeds.
+Active successor run `qg-20260810-persistence-execution-v02-run-005` preserves exact
+run-004 lineage and starts at `[0, 0, 1, 0]` with only that stable failure key. Retained
+iteration 1 adds a 500 ms transaction-local timeout with typed authorized deferral,
+non-enumerating denial, correlated audit, and safe same-key retry after release. Sixteen
+PostgreSQL tests and the complete regression pass, improving the vector to `[0, 0, 0, 0]`.
+The exact committed tree still requires fresh hosted PostgreSQL/full-regression evidence
+and all four independent roles before the v0.2 pass gate. Persistence & Execution
+Foundation v0.2 remains unaccepted. No pilot, production, live-provider, real-data,
+autonomous-specialist, or external-action claim is authorized.

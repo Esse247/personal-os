@@ -7,7 +7,7 @@ deferred with an explicit evidence-based rationale.
 
 - [x] Accepted Foundation v0.1 tag and complete regression baseline recovered.
 - [x] Pre-implementation Quality Gauntlet contract is fixed and SHA-256 bound.
-- [x] Active successor run 004 preserves run-003 lineage and every unresolved stable failure key.
+- [x] Active successor run 005 preserves run-004 lineage and the sole unresolved stable failure key.
 - [x] ADRs 0012 and 0013 fix PostgreSQL, event, authority, and delivery boundaries.
 
 ## PostgreSQL reference path
@@ -32,13 +32,17 @@ deferred with an explicit evidence-based rationale.
 - [x] Exact recovery replay reauthorizes after serialization and before result disclosure;
   allow-then-revoke local, PostgreSQL, and independent probes pass with denial audit.
 - [x] Worker effects are reauthorized before the tested default effect and live handlers fail closed.
-- [~] Claim labeling, adversarial handler-envelope binding, and a scoped PostgreSQL
-  recovery advisory-lock timeout remain P2 hardening.
+- [x] Claim/reclaim history is labeled preauthorization; later delivered history remains allowed.
+- [x] Adversarial direct, mutable-input, and stateful-consumer handler outputs fail closed
+  before effect or receipt persistence, with typed failed history and audit.
+- [x] Recovery advisory-lock acquisition has a 500 ms transaction-local timeout; real
+  PostgreSQL proves authorized audit/retry and wrong-actor non-disclosure with no partial write.
 
 ## CI and regressions
 
 - [x] A PostgreSQL 17 workflow invokes the same strict verifier and full regression command.
-- [~] No actual hosted CI run exists; structural validation and local execution are not substitutes.
+- [x] GitHub Actions run 31441487067 provisions PostgreSQL 17 and passes the strict
+  PostgreSQL verifier plus full regression on candidate commit `3ae6d6d`.
 - [x] The complete Foundation v0.1 regression and both mock/synthetic demos remain green.
 - [x] SQLite remains a clearly labeled lightweight local/test path.
 - [x] Dependency, credential, build, regression, quality-structure, and continuity gates pass.
@@ -50,13 +54,16 @@ deferred with an explicit evidence-based rationale.
 - [x] Run-003 independent security recheck accepts PE-F-010 with no P0/P1 security finding.
 - [x] Run-003 persistence-architecture and concurrency/reliability reviewers accept with
   no P0/P1 finding in their scopes.
-- [~] Run-003 milestone reviewer rejects and escalates solely because mandatory CAP-010
-  has no actual hosted run; v0.2 is not accepted.
-- [~] One P1 remains; the named Quality Gauntlet pass gate must reject until actual hosted
-  PostgreSQL CI succeeds.
+- [x] Run-004 architecture, concurrency/reliability, and security reviewers accept with no
+  P0/P1 finding and independently accept the handler-envelope repair.
+- [~] Run-004 milestone reviewer rejects and escalates solely because mandatory CAP-007
+  retains the lock-timeout P2 after budget exhaustion; v0.2 is not accepted.
+- [x] No P0/P1 remains after actual hosted PostgreSQL CI success.
 - [x] GitHub destination and explicit commit/remote/push/Actions authority are recorded;
-  hosted execution remains pending rather than inferred.
+  hosted run 31441487067 is authentic and final repaired-tree hosting remains pending.
 - [x] Manifest, ADRs, architecture/security docs, risks, status, evidence, and handoff agree.
+- [~] Fresh hosted execution of the exact repaired commit and final run-005 independent
+  acceptance/pass-gate evidence remain pending.
 
 ## Product North Star boundary
 
