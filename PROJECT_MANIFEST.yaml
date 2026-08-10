@@ -1,0 +1,107 @@
+schema_version: 1
+project:
+  name: PERSONAL OS
+  phase: foundation-v0.1
+  phase_label: Foundation v0.1
+  status: complete
+  data_mode: synthetic_only
+  integration_mode: mock_only
+  default_bind_host: 127.0.0.1
+
+source_hierarchy:
+  - PROJECT_MANIFEST.yaml
+  - docs/decisions/
+  - docs/PRODUCT_SOURCE_OF_TRUTH.md
+  - docs/ARCHITECTURE.md
+  - docs/DOMAIN_MODEL.md
+  - docs/DATA_AND_MEMORY_MODEL.md
+  - docs/AUTONOMY_AND_APPROVALS.md
+  - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+  - spec/
+  - code_and_tests
+  - docs/BUILD_STATUS.md
+  - docs/EVIDENCE.md
+  - docs/HANDOFF.md
+
+authoritative_sources:
+  index: docs/INDEX.md
+  charter: docs/PROJECT_CHARTER.md
+  product: docs/PRODUCT_SOURCE_OF_TRUTH.md
+  architecture: docs/ARCHITECTURE.md
+  domain: docs/DOMAIN_MODEL.md
+  data_and_memory: docs/DATA_AND_MEMORY_MODEL.md
+  autonomy_and_approvals: docs/AUTONOMY_AND_APPROVALS.md
+  security_and_privacy: docs/SECURITY_PRIVACY_THREAT_MODEL.md
+  integrations: docs/INTEGRATION_CONTRACTS.md
+  model_routing: docs/MODEL_ROUTING.md
+  scheduling: docs/SCHEDULING_ENGINE.md
+  ux_and_notifications: docs/UX_AND_NOTIFICATION_PRINCIPLES.md
+  implementation_plan: docs/IMPLEMENTATION_PLAN.md
+  roadmap: docs/ROADMAP.md
+  build_status: docs/BUILD_STATUS.md
+  handoff: docs/HANDOFF.md
+  evidence: docs/EVIDENCE.md
+  open_questions: docs/OPEN_QUESTIONS.md
+  risks: docs/RISK_REGISTER.md
+
+specifications:
+  capabilities: spec/capabilities.yaml
+  permissions: spec/permissions.yaml
+  integrations: spec/integrations.yaml
+
+decisions:
+  directory: docs/decisions
+  index: docs/decisions/README.md
+
+checklists:
+  active: checklists/FOUNDATION_V0_1.md
+  security: checklists/SECURITY_REVIEW.md
+  integration: checklists/INTEGRATION_READINESS.md
+  release: checklists/RELEASE_READINESS.md
+
+repo_skills:
+  - .agents/skills/project-continuity/SKILL.md
+  - .agents/skills/evidence-gate/SKILL.md
+  - .agents/skills/architecture-guardian/SKILL.md
+  - .agents/skills/security-permission-review/SKILL.md
+  - .agents/skills/quality-gauntlet/SKILL.md
+
+quality:
+  protocol: quality/README.md
+  agents_policy: quality/agents-policy.yaml
+  contracts: quality/contracts
+  runs: quality/runs
+  rubrics: quality/rubrics
+  schemas: quality/schemas
+  validator: scripts/validate_quality.py
+
+code_roots:
+  backend: backend
+  frontend: frontend
+  migrations: backend/migrations
+  fixtures: backend/src/personal_os/fixtures.py
+  scripts: scripts
+
+verification:
+  setup_windows: powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
+  setup_posix: ./scripts/setup.sh
+  development_windows: powershell -ExecutionPolicy Bypass -File scripts/dev.ps1
+  development_posix: ./scripts/dev.sh
+  build: npm run build
+  lint: npm run lint
+  typecheck: npm run typecheck
+  unit_tests: npm run test:unit
+  integration_tests: npm run test:integration
+  all_tests: npm test
+  local_demo: npm run demo:verify
+  migrate: npm run db:migrate
+  fixtures: npm run fixtures:load
+  continuity: npm run validate:continuity
+  quality: npm run validate:quality
+  full: npm run verify
+  dependency_audit: npm run audit:dependencies
+
+completion_records:
+  handoff: docs/HANDOFF.md
+  evidence: docs/EVIDENCE.md
+  current_status: docs/BUILD_STATUS.md

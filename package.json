@@ -1,0 +1,31 @@
+{
+  "name": "personal-os-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "setup:check": "node scripts/check-setup.mjs",
+    "dev": "node scripts/dev.mjs",
+    "build": "npm --workspace frontend run build",
+    "lint": "npm run lint:backend && npm --workspace frontend run lint",
+    "lint:backend": "node scripts/python.mjs -m ruff check backend scripts && node scripts/python.mjs -m ruff format --check backend scripts",
+    "typecheck": "npm run typecheck:backend && npm --workspace frontend run typecheck",
+    "typecheck:backend": "node scripts/python.mjs -m mypy backend/src backend/tests scripts/validate_continuity.py scripts/validate_quality.py",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "npm run test:unit:backend && npm --workspace frontend run test",
+    "test:unit:backend": "node scripts/python.mjs -m pytest backend/tests/unit -q",
+    "test:integration": "node scripts/python.mjs -m pytest backend/tests/integration -q",
+    "db:migrate": "node scripts/python.mjs -m alembic -c backend/alembic.ini upgrade head",
+    "fixtures:load": "node scripts/python.mjs -m personal_os.cli fixtures-load",
+    "validate:continuity": "node scripts/python.mjs scripts/validate_continuity.py",
+    "validate:quality": "node scripts/python.mjs scripts/validate_quality.py",
+    "demo:verify": "node scripts/python.mjs -m personal_os.demo",
+    "audit:dependencies": "node scripts/python.mjs -m pip_audit --local --cache-dir .audit-cache/pip && npm audit --audit-level=high --cache .audit-cache/npm",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build && npm run validate:quality && npm run validate:continuity && npm run demo:verify"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

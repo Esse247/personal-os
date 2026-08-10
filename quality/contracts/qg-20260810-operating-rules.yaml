@@ -1,0 +1,126 @@
+schema_version: 1
+contract_id: qg-20260810-operating-rules
+goal: >-
+  Harden PERSONAL OS repository operating rules and install a bounded,
+  evidence-driven quality gauntlet without changing Foundation v0.1 product behavior.
+milestone: post-foundation-v0.1-operating-hardening
+created_at: "2026-08-10T19:15:36Z"
+owner_role: root-builder
+scope:
+  in:
+    - AGENTS.md navigation and operating rules
+    - repository-scoped quality-gauntlet skill
+    - machine-readable quality contracts, runs, rubrics, and validators
+    - manifest, ADR, evidence, status, checklist, risk, and handoff reconciliation
+  out:
+    - Foundation v0.2 product implementation
+    - production identity or authorization changes
+    - live providers, real data, or external side effects
+    - unbounded autonomous review loops
+iteration_budget: 3
+criteria:
+  - id: CAP-001
+    class: capability
+    description: AGENTS.md is concise, navigational, and every local path reference resolves.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: deterministic
+    command: npm run validate:quality
+    expected: AGENTS policy and reference checks pass.
+  - id: CAP-002
+    class: capability
+    description: >-
+      A fresh session can locate mission, architecture, phase, verified state, active goal,
+      unresolved decisions, risks, and the exact next action without chat history.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: Independent continuity reviewer accepts the recovery path.
+  - id: CAP-003
+    class: capability
+    description: The quality-gauntlet skill is concise, discoverable, and valid.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: deterministic
+    command: skill quick_validate.py
+    expected: Skill validation exits 0.
+  - id: CAP-004
+    class: capability
+    description: >-
+      Quality contracts and runs are machine-validated, including iteration budget,
+      mandatory criteria, regressions, severity, reviewer independence, and disposition.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: deterministic
+    command: npm run test:unit:backend && npm run validate:quality
+    expected: Valid fixtures pass and broken quality fixtures fail precisely.
+  - id: CAP-005
+    class: capability
+    description: >-
+      The workflow prioritizes confirmed failures, permits one focused repair per iteration,
+      compares against the best result, and stops with PASS, FAIL, or ESCALATE.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: Independent gauntlet reviewer accepts the bounded protocol.
+  - id: REG-001
+    class: regression
+    description: Existing repository continuity remains valid.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: deterministic
+    command: npm run validate:continuity
+    expected: Exit 0 with every manifest target and local documentation link resolved.
+  - id: REG-002
+    class: regression
+    description: The complete accepted Foundation v0.1 regression surface remains green.
+    mandatory: true
+    severity_on_fail: P0
+    evaluator: deterministic
+    command: npm run verify
+    expected: Lint, typecheck, tests, build, quality, continuity, and demo all exit 0.
+  - id: REG-003
+    class: regression
+    description: Foundation capability truth remains localhost, mock-only, and synthetic-only.
+    mandatory: true
+    severity_on_fail: P0
+    evaluator: deterministic
+    command: npm run demo:verify
+    expected: No live capability is reported and both accepted demo flows still pass.
+  - id: REV-001
+    class: review
+    description: An author-independent reviewer accepts AGENTS.md continuity and conciseness.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: ACCEPT with no P0/P1 finding.
+  - id: REV-002
+    class: review
+    description: An author-independent reviewer accepts gauntlet architecture and stopping rules.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: ACCEPT with no P0/P1 finding.
+required_reviewers:
+  - role: agents-continuity
+    independent: true
+  - role: gauntlet-architecture
+    independent: true
+stop_conditions:
+  success:
+    - every mandatory criterion passes
+    - no unresolved P0 or P1 failure remains
+    - every regression criterion passes
+    - every required independent reviewer accepts
+    - final evidence and continuity records are reconciled
+  escalate:
+    - the same material failure survives 3 focused repairs
+    - 2 consecutive iterations produce no measurable improvement
+    - requirements conflict or success cannot be measured reliably
+    - a required external dependency or user decision blocks progress
+    - a repair would violate architecture, security, product, or phase constraints
+    - the iteration budget is exhausted without satisfying success conditions

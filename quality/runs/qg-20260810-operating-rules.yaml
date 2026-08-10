@@ -1,0 +1,337 @@
+schema_version: 1
+run_id: qg-20260810-operating-rules-run-001
+contract_id: qg-20260810-operating-rules
+contract_path: quality/contracts/qg-20260810-operating-rules.yaml
+contract_sha256: bd055bbdf80f702d67402bacbae8ec38cbf4b507856031e377b3b508c33ef1d2
+goal: >-
+  Harden PERSONAL OS repository operating rules and install a bounded,
+  evidence-driven quality gauntlet without changing Foundation v0.1 product behavior.
+milestone: post-foundation-v0.1-operating-hardening
+started_at: "2026-08-10T19:15:36Z"
+status: COMPLETE
+builder_ids:
+  - root-builder
+repository_revision: null
+workspace_state: uncommitted
+references:
+  - PROJECT_MANIFEST.yaml
+  - AGENTS.md
+  - docs/decisions/0011-bounded-quality-gauntlet.md
+  - checklists/FOUNDATION_V0_1.md
+baseline:
+  summary: >-
+    Foundation v0.1 is accepted and green; AGENTS.md is 38 lines, 315 words,
+    and 2488 UTF-8 bytes; no quality directory or quality-gauntlet skill exists.
+  quality_vector: [0, 1, 1, 0]
+  checks:
+    - criterion_id: REG-002
+      command: npm.cmd run verify
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        26 backend unit, 1 frontend, and 19 integration tests passed with lint,
+        typecheck, build, continuity, and both-flow demo in 37.7 seconds.
+    - criterion_id: CAP-001
+      command: PowerShell AGENTS.md metric and path inventory
+      exit_code: 0
+      result: PARTIAL
+      evidence: AGENTS.md is concise but recovery coverage and reference validation are incomplete.
+    - criterion_id: CAP-003
+      command: Test-Path .agents/skills/quality-gauntlet/SKILL.md
+      exit_code: 0
+      result: FAIL
+      evidence: The requested repository-scoped skill does not exist at baseline.
+iterations:
+  - number: 1
+    primary_failure_id: QG-F-001
+    repair:
+      author_id: root-builder
+      summary: >-
+        Added the bounded repo skill, inert machine-readable protocol, contract/run
+        schemas and validator, manifest/ADR integration, and focused validator tests.
+      references:
+        - .agents/skills/quality-gauntlet/SKILL.md
+        - quality/README.md
+        - scripts/validate_quality.py
+    before:
+      quality_vector: [0, 1, 1, 0]
+      evidence: No gauntlet skill, protocol, or validator existed at baseline.
+    after:
+      quality_vector: [0, 0, 1, 0]
+      evidence: >-
+        Skill validation and 19 focused validator tests pass; the protocol is bounded,
+        contract-hashed, independently reviewable, and does not execute recorded commands.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-003
+        command: >-
+          .venv/Scripts/python.exe C:/Users/TheLo/.codex/skills/.system/skill-creator/scripts/quick_validate.py
+          .agents/skills/quality-gauntlet
+        exit_code: 0
+        result: PASS
+        evidence: Skill is valid.
+      - criterion_id: CAP-004
+        command: >-
+          .venv/Scripts/python.exe -m pytest backend/tests/unit/test_quality_validator.py -q
+        exit_code: 0
+        result: PASS
+        evidence: 19 focused validator tests passed in 0.22 seconds.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run validate:continuity
+        exit_code: 0
+        result: PASS
+        evidence: Manifest, sources, handoff, evidence, ADRs, and links passed.
+  - number: 2
+    primary_failure_id: QG-F-002
+    repair:
+      author_id: root-builder
+      summary: >-
+        Hardened AGENTS.md as a concise recovery and authority map, added measurable
+        reference/size checks, and made continuity phase/quality discovery durable.
+      references:
+        - AGENTS.md
+        - quality/agents-policy.yaml
+        - scripts/validate_continuity.py
+    before:
+      quality_vector: [0, 0, 1, 0]
+      evidence: The baseline protocol omitted several explicit recovery facts and gauntlet triggers.
+    after:
+      quality_vector: [0, 0, 0, 0]
+      evidence: >-
+        AGENTS.md is 521 words, 32 nonblank lines, and 4030 UTF-8 bytes; it maps all
+        eight recovery facts and every required local reference.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-001
+        command: PowerShell AGENTS.md metric and policy inventory
+        exit_code: 0
+        result: PASS
+        evidence: 521 words, 32 nonblank lines, and 4030 UTF-8 bytes.
+      - criterion_id: CAP-002
+        command: Independent continuity review pending final stable tree
+        exit_code: null
+        result: PARTIAL
+        evidence: Deterministic recovery map passes; author-independent acceptance remains pending.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run validate:continuity
+        exit_code: 0
+        result: PASS
+        evidence: Manifest quality targets, dynamic phase, sources, ADRs, and links passed.
+  - number: 3
+    primary_failure_id: QG-F-003
+    repair:
+      author_id: root-builder
+      summary: >-
+        Closed fail-open acceptance derivation by recomputing failure lifecycle vectors,
+        rejecting retained regression failures, expanding sensitive-risk review routing,
+        requiring command-backed deterministic PASS, binding continuity evidence, and
+        preserving escalation lineage across successor runs.
+      references:
+        - scripts/validate_quality.py
+        - quality/schemas/run.schema.json
+        - backend/tests/unit/test_quality_validator.py
+    before:
+      quality_vector: [0, 1, 0, 0]
+      evidence: >-
+        Independent adversarial review confirmed four acceptance bypasses under one
+        systemic P1 evidence-derivation failure.
+    after:
+      quality_vector: [0, 0, 0, 0]
+      evidence: >-
+        Failure lifecycle, regression retention, security routing, deterministic
+        execution evidence, continuity binding, and lineage are now adversarially tested.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-004
+        command: >-
+          .venv/Scripts/python.exe -m pytest backend/tests/unit/test_quality_validator.py
+          backend/tests/unit/test_continuity_validator.py -q
+        exit_code: 0
+        result: PASS
+        evidence: 36 focused validator and continuity tests passed in 0.83 seconds.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run validate:continuity
+        exit_code: 0
+        result: PASS
+        evidence: Manifest, sources, handoff, evidence, ADRs, and links passed.
+final_checks:
+  - criterion_id: CAP-001
+    command: npm.cmd run validate:quality
+    exit_code: 0
+    result: PASS
+    evidence: AGENTS policy, size, required phrases, and repository-relative references passed.
+  - criterion_id: CAP-002
+    command: Independent continuity review by russell-continuity
+    exit_code: null
+    result: PASS
+    evidence: Reviewer accepted the recovery map at 15/16 with no P0/P1 finding.
+  - criterion_id: CAP-003
+    command: >-
+      .venv/Scripts/python.exe C:/Users/TheLo/.codex/skills/.system/skill-creator/scripts/quick_validate.py
+      .agents/skills/quality-gauntlet
+    exit_code: 0
+    result: PASS
+    evidence: Skill is valid.
+  - criterion_id: CAP-004
+    command: >-
+      .venv/Scripts/python.exe -m pytest backend/tests/unit/test_quality_validator.py
+      backend/tests/unit/test_continuity_validator.py -q
+    exit_code: 0
+    result: PASS
+    evidence: 36 focused tests passed in 0.83 seconds, including adversarial acceptance probes.
+  - criterion_id: CAP-005
+    command: Independent gauntlet architecture review by faraday-gauntlet
+    exit_code: null
+    result: PASS
+    evidence: Reviewer accepted the repaired bounded protocol at 15/16 with no P0/P1 finding.
+  - criterion_id: REG-001
+    command: npm.cmd run validate:continuity
+    exit_code: 0
+    result: PASS
+    evidence: Manifest targets, sources, dynamic phase, handoff, evidence, ADRs, and links passed.
+  - criterion_id: REG-002
+    command: npm.cmd run verify
+    exit_code: 0
+    result: PASS
+    evidence: >-
+      Ruff/ESLint, mypy/TypeScript, 57 backend unit, 1 frontend, 19 integration,
+      production build, quality, continuity, and deterministic demo passed in 28.5 seconds.
+  - criterion_id: REG-003
+    command: npm.cmd run demo:verify
+    exit_code: 0
+    result: PASS
+    evidence: >-
+      Both accepted flows passed in local-mock-synthetic mode; live_capabilities was empty.
+  - criterion_id: REV-001
+    command: Independent continuity review by russell-continuity
+    exit_code: null
+    result: PASS
+    evidence: ACCEPT; no P0/P1 and all rubric dimensions met threshold.
+  - criterion_id: REV-002
+    command: Independent gauntlet architecture review by faraday-gauntlet
+    exit_code: null
+    result: PASS
+    evidence: ACCEPT after adversarial re-review; no P0/P1 and all rubric dimensions met threshold.
+reviewers:
+  - reviewer_id: russell-continuity
+    role: agents-continuity
+    independent: true
+    disposition: ACCEPT
+    score: 15
+    evidence: >-
+      Accepted the final AGENTS recovery and authority map; 521 words, 32 nonblank
+      lines, 4030 bytes, all references resolved, and no P0/P1 finding.
+    evidence_refs:
+      - AGENTS.md
+      - quality/agents-policy.yaml
+  - reviewer_id: faraday-gauntlet
+    role: gauntlet-architecture
+    independent: true
+    disposition: ACCEPT
+    score: 15
+    evidence: >-
+      Accepted after replaying the original bypass probes plus budget, lineage,
+      inertness, contract-binding, and structural-versus-PASS checks; no P0/P1 remains.
+    evidence_refs:
+      - quality/README.md
+      - scripts/validate_quality.py
+      - backend/tests/unit/test_quality_validator.py
+    risk_tags_reviewed:
+      - architecture
+rubric_results:
+  - rubric_ref: quality/rubrics/repository-operating-rules.yaml
+    reviewer_id: russell-continuity
+    scores:
+      recovery: 4
+      authority: 4
+      instruction_economy: 3
+      boundedness: 4
+    total: 15
+  - rubric_ref: quality/rubrics/repository-operating-rules.yaml
+    reviewer_id: faraday-gauntlet
+    scores:
+      recovery: 4
+      authority: 3
+      instruction_economy: 4
+      boundedness: 4
+    total: 15
+failures:
+  - id: QG-F-001
+    failure_key: missing-quality-gauntlet
+    discovered_iteration: 0
+    resolved_iteration: 1
+    criterion_ids:
+      - CAP-003
+      - CAP-004
+      - CAP-005
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    summary: No bounded quality-gauntlet skill, artifact contract, or validator exists.
+    resolution: Resolved by retained repair iteration 1.
+  - id: QG-F-002
+    failure_key: incomplete-recovery-map
+    discovered_iteration: 0
+    resolved_iteration: 2
+    criterion_ids:
+      - CAP-001
+      - CAP-002
+    severity: P2
+    status: RESOLVED
+    attempts: 1
+    summary: >-
+      AGENTS.md does not explicitly map every required recovery question or define
+      when the future gauntlet must and must not run.
+    resolution: Resolved by retained repair iteration 2; independent acceptance is still required.
+  - id: QG-F-003
+    failure_key: fail-open-acceptance-derivation
+    discovered_iteration: 3
+    resolved_iteration: 3
+    criterion_ids:
+      - CAP-004
+      - CAP-005
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    summary: >-
+      Acceptance trusted supplied vectors/results and did not fully bind regression,
+      security-routing, deterministic execution, or continuity evidence.
+    resolution: Resolved by retained repair iteration 3 and pending independent re-review.
+    risk_tags:
+      - architecture
+remaining_risks:
+  - id: QG-R-001
+    severity: P2
+    summary: >-
+      The validator checks recorded evidence structure and consistency but cannot
+      cryptographically prove command execution or reviewer identity.
+    risk_tags:
+      - evidence
+    references:
+      - quality/README.md
+  - id: QG-R-002
+    severity: P2
+    summary: >-
+      Risk routing is deterministic for declared tags, but semantic omission cannot
+      be inferred reliably from free-text scope; independent review remains necessary.
+    risk_tags:
+      - architecture
+    references:
+      - quality/contracts/qg-20260810-operating-rules.yaml
+continuity:
+  evidence_ref: docs/EVIDENCE.md
+  evidence_status: RECONCILED
+  build_status_ref: docs/BUILD_STATUS.md
+  build_status_status: RECONCILED
+  handoff_ref: docs/HANDOFF.md
+  handoff_status: RECONCILED
+  checklist_ref: checklists/FOUNDATION_V0_1.md
+  checklist_status: RECONCILED
+final_disposition: PASS
+completed_at: "2026-08-10T19:58:05Z"

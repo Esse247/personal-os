@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "personal-os"
+version = "0.1.0"
+description = "Mock-only Foundation v0.1 backend for PERSONAL OS"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic>=1.14,<2",
+  "fastapi>=0.115,<1",
+  "pydantic>=2.10,<3",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn>=0.34,<1"
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "mypy>=1.14,<2",
+  "pip-audit>=2.10,<3",
+  "pytest>=9.0.3,<10",
+  "pytest-cov>=6,<8",
+  "pyyaml>=6,<7",
+  "ruff>=0.9,<1",
+  "types-PyYAML>=6,<7"
+]
+
+[project.scripts]
+personal-os = "personal_os.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/personal_os"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
+cache_dir = ".pytest_cache"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+plugins = []
+
+[[tool.mypy.overrides]]
+module = "alembic.*"
+ignore_missing_imports = true

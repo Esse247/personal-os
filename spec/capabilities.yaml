@@ -1,0 +1,91 @@
+schema_version: 1
+status_vocabulary:
+  - planned
+  - mocked
+  - implemented
+  - live
+  - prohibited
+phase: foundation-v0.1
+assertions:
+  contains_real_credentials: false
+  contains_personal_data: false
+  permits_live_provider_mode: false
+  permits_level_4_live_actions: false
+  permits_level_5_actions: false
+capabilities:
+  project_memory:
+    status: implemented
+    mode: local
+    evidence: PROJECT_MANIFEST.yaml
+  intent_capture:
+    status: implemented
+    mode: synthetic
+    evidence: backend/tests/integration/test_api_flows.py
+  clarification:
+    status: implemented
+    mode: deterministic
+    evidence: backend/tests/integration/test_api_flows.py
+  commitment_tracking:
+    status: implemented
+    mode: local
+    evidence: backend/tests/unit/test_domain.py
+  deterministic_scheduling:
+    status: implemented
+    mode: local
+    evidence: backend/tests/unit/test_scheduler_and_finance.py
+  calendar_availability:
+    status: mocked
+    mode: mock
+    evidence: backend/src/personal_os/adapters/providers/mock.py
+  calendar_external_write:
+    status: prohibited
+    mode: none
+    evidence: docs/AUTONOMY_AND_APPROVALS.md
+  schedule_approval:
+    status: implemented
+    mode: internal_reversible
+    evidence: backend/tests/integration/test_api_flows.py
+  finance_transaction_import:
+    status: mocked
+    mode: synthetic
+    evidence: backend/src/personal_os/fixtures.py
+  finance_categorisation:
+    status: implemented
+    mode: deterministic
+    evidence: backend/tests/integration/test_api_flows.py
+  banking_live_read:
+    status: prohibited
+    mode: none
+    evidence: docs/INTEGRATION_CONTRACTS.md
+  payment_or_transfer:
+    status: prohibited
+    mode: none
+    evidence: docs/AUTONOMY_AND_APPROVALS.md
+  dashboard:
+    status: implemented
+    mode: local
+    evidence: frontend/src/App.tsx
+  audit_history:
+    status: implemented
+    mode: local_append_only
+    evidence: backend/tests/integration/test_api_flows.py
+  agent_activity:
+    status: planned
+    mode: synthetic
+    evidence: null
+  external_notifications:
+    status: prohibited
+    mode: none
+    evidence: docs/UX_AND_NOTIFICATION_PRINCIPLES.md
+  production_authentication:
+    status: planned
+    mode: future
+    evidence: docs/decisions/0010-local-development-identity.md
+  model_inference:
+    status: mocked
+    mode: deterministic_mock_contract
+    evidence: docs/MODEL_ROUTING.md
+  health_guidance:
+    status: prohibited
+    mode: none
+    evidence: docs/PROJECT_CHARTER.md

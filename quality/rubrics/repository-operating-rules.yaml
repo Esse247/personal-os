@@ -1,0 +1,20 @@
+schema_version: 1
+rubric_id: repository-operating-rules-v1
+minimum_total: 12
+dimensions:
+  - id: recovery
+    range: [0, 4]
+    minimum: 3
+    description: A fresh session reconstructs mission, architecture, phase, evidence-backed state, goal, open decisions, risks, and next action without chat history.
+  - id: authority
+    range: [0, 4]
+    minimum: 3
+    description: Source precedence, deterministic authority, permission/security boundaries, capability truth, and independent acceptance are explicit.
+  - id: instruction_economy
+    range: [0, 4]
+    minimum: 3
+    description: AGENTS.md remains concise and navigational rather than duplicating product, architecture, or gauntlet detail.
+  - id: boundedness
+    range: [0, 4]
+    minimum: 3
+    description: The gauntlet makes one focused repair per iteration and has enforceable budgets, stop rules, and escalation semantics.

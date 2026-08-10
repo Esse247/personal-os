@@ -1,0 +1,81 @@
+schema_version: 1
+phase: foundation-v0.1
+runtime_policy:
+  allowed_modes: [mock]
+  rejected_modes: [null, live, production, unknown]
+  network_fallback: prohibited
+  credentials_required: false
+
+common_contract:
+  request_fields:
+    - actor_context
+    - correlation_id
+    - capability
+    - purpose
+    - deadline
+    - idempotency_key
+    - task_type
+    - risk
+    - privacy
+  response_fields:
+    - provider_id
+    - capability_mode
+    - observed_at
+    - provenance
+    - external_reference_if_any
+    - external_version
+    - warnings
+    - canonical_error
+  error_kinds:
+    - unsupported_capability
+    - invalid_request
+    - unauthorized
+    - timeout
+    - unavailable
+    - malformed_response
+
+providers:
+  ModelProvider:
+    status: mocked
+    capabilities: [interpret_intent_proposal]
+    prohibited: [authoritative_write, permission_grant, approval]
+  CalendarProvider:
+    status: mocked
+    capabilities: [mock_availability_read]
+    prohibited: [live_event_create, live_event_update, live_event_delete]
+  NotificationProvider:
+    status: mocked
+    capabilities: [mock_notification_record]
+    prohibited: [external_dispatch]
+  EmailProvider:
+    status: mocked
+    capabilities: [null_draft]
+    prohibited: [send]
+  BankingProvider:
+    status: mocked
+    capabilities: [synthetic_transaction_read]
+    prohibited: [live_account_read, payment, transfer]
+  WearableProvider:
+    status: planned
+    capabilities: [null_observation]
+    prohibited: [live_read, write]
+  LocationProvider:
+    status: planned
+    capabilities: [null_observation]
+    prohibited: [live_tracking]
+  VoiceProvider:
+    status: planned
+    capabilities: [null_transcription, null_synthesis]
+    prohibited: [live_capture]
+  SearchProvider:
+    status: planned
+    capabilities: [null_search]
+    prohibited: [live_search]
+  FileStorageProvider:
+    status: planned
+    capabilities: [null_object_reference]
+    prohibited: [cloud_upload]
+  ToolProvider:
+    status: mocked
+    capabilities: [mock_authorized_execution_envelope]
+    prohibited: [external_execution]

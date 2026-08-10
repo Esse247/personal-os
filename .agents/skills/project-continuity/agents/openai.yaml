@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Continuity"
+  short_description: "Resume and hand off PERSONAL OS work safely"
+  default_prompt: "Use $project-continuity to resume the next verified PERSONAL OS task."

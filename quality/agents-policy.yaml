@@ -1,0 +1,36 @@
+schema_version: 1
+target: AGENTS.md
+limits:
+  max_words: 600
+  max_nonblank_lines: 75
+  max_bytes: 12000
+required_headings:
+  - Source hierarchy
+  - Recovery and goal selection
+  - Work and authority boundaries
+  - Quality, subagents, and review
+  - Security and capability truth
+  - Evidence and handoff
+required_references:
+  - PROJECT_MANIFEST.yaml
+  - docs/INDEX.md
+  - docs/PROJECT_CHARTER.md
+  - docs/ARCHITECTURE.md
+  - docs/BUILD_STATUS.md
+  - docs/EVIDENCE.md
+  - docs/HANDOFF.md
+  - docs/OPEN_QUESTIONS.md
+  - docs/RISK_REGISTER.md
+  - spec/capabilities.yaml
+  - .agents/skills/quality-gauntlet/SKILL.md
+required_phrases:
+  - source hierarchy
+  - smallest coherent
+  - independent reviewer
+  - may not approve
+  - non-overlapping
+  - deterministic code
+  - provider-neutral
+  - planned, mocked, implemented, live, and prohibited
+  - checkpoint
+  - exact next task

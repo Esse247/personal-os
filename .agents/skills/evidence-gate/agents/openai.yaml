@@ -1,0 +1,4 @@
+interface:
+  display_name: "Evidence Gate"
+  short_description: "Require proof before PERSONAL OS completion claims"
+  default_prompt: "Use $evidence-gate to verify a PERSONAL OS completion claim."

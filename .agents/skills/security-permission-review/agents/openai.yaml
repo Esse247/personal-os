@@ -1,0 +1,4 @@
+interface:
+  display_name: "Security Permission Review"
+  short_description: "Review PERSONAL OS privacy and action authority"
+  default_prompt: "Use $security-permission-review to review this PERSONAL OS permission change."

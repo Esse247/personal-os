@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Guardian"
+  short_description: "Protect PERSONAL OS module and provider boundaries"
+  default_prompt: "Use $architecture-guardian to review this PERSONAL OS architecture change."

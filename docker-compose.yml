@@ -1,0 +1,58 @@
+name: personal-os-foundation
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: personal_os
+      POSTGRES_USER: personal_os
+      POSTGRES_PASSWORD: personal_os_local_only
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U personal_os -d personal_os"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - personal_os_postgres:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PERSONAL_OS_ENV: development
+      PERSONAL_OS_PROVIDER_MODE: mock
+      PERSONAL_OS_DATABASE_URL: postgresql+psycopg://personal_os:personal_os_local_only@postgres:5432/personal_os
+      PERSONAL_OS_BIND_HOST: 127.0.0.1
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        python -m alembic -c backend/alembic.ini upgrade head &&
+        python -m personal_os.cli fixtures-load &&
+        python -m uvicorn personal_os.interfaces.http.app:app --host 0.0.0.0 --port 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4173:8080"
+
+volumes:
+  personal_os_postgres:

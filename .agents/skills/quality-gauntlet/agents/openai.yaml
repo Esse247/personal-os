@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quality Gauntlet"
+  short_description: "Run bounded evidence-driven milestone repair"
+  default_prompt: "Use $quality-gauntlet to define a success contract and run a bounded evidence-driven quality pass."

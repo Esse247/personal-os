@@ -1,0 +1,1 @@
+"""Mock-only provider adapters."""

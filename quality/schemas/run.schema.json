@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quality/schemas/run.schema.json",
+  "title": "PERSONAL OS quality-gauntlet run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "contract_id",
+    "contract_path",
+    "contract_sha256",
+    "goal",
+    "milestone",
+    "started_at",
+    "status",
+    "builder_ids",
+    "baseline",
+    "iterations",
+    "final_checks",
+    "reviewers",
+    "failures",
+    "remaining_risks",
+    "final_disposition",
+    "completed_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "$ref": "#/$defs/id" },
+    "contract_id": { "$ref": "#/$defs/id" },
+    "contract_path": { "type": "string", "minLength": 1 },
+    "contract_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "goal": { "$ref": "#/$defs/nonEmpty" },
+    "milestone": { "$ref": "#/$defs/nonEmpty" },
+    "repository_revision": { "type": ["string", "null"], "minLength": 1 },
+    "workspace_state": { "enum": ["committed", "uncommitted"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["ACTIVE", "AWAITING_REVIEW", "COMPLETE"] },
+    "builder_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "references": { "$ref": "#/$defs/repoRefs" },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "quality_vector", "checks"],
+      "properties": {
+        "summary": { "$ref": "#/$defs/nonEmpty" },
+        "quality_vector": { "$ref": "#/$defs/qualityVector" },
+        "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } }
+      }
+    },
+    "iterations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/iteration" }
+    },
+    "final_checks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/check" }
+    },
+    "reviewers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reviewer" }
+    },
+    "rubric_results": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rubricResult" }
+    },
+    "continuity": { "$ref": "#/$defs/continuity" },
+    "lineage": { "$ref": "#/$defs/runLineage" },
+    "failures": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/failure" }
+    },
+    "remaining_risks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/risk" }
+    },
+    "final_disposition": { "type": ["string", "null"], "enum": ["PASS", "FAIL", "ESCALATE", null] },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["status"],
+        "properties": { "status": { "const": "COMPLETE" } }
+      },
+      "then": {
+        "required": ["continuity"],
+        "properties": {
+          "failures": { "items": { "$ref": "#/$defs/finalFailure" } }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "repoRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "qualityVector": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "integer", "minimum": 0 },
+        { "type": "integer", "minimum": 0 },
+        { "type": "integer", "minimum": 0 }
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "result", "evidence"],
+      "properties": {
+        "criterion_id": { "$ref": "#/$defs/id" },
+        "command": { "type": ["string", "null"] },
+        "exit_code": { "type": ["integer", "null"] },
+        "result": { "enum": ["PASS", "FAIL", "PARTIAL", "SKIP"] },
+        "evidence": { "$ref": "#/$defs/nonEmpty" },
+        "evidence_refs": { "$ref": "#/$defs/repoRefs" }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quality_vector", "evidence"],
+      "properties": {
+        "quality_vector": { "$ref": "#/$defs/qualityVector" },
+        "evidence": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "iteration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "primary_failure_id",
+        "repair",
+        "before",
+        "after",
+        "assessment",
+        "kept",
+        "targeted_checks",
+        "regression_checks"
+      ],
+      "properties": {
+        "number": { "type": "integer", "minimum": 1 },
+        "primary_failure_id": { "$ref": "#/$defs/id" },
+        "repair": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["author_id", "summary"],
+          "properties": {
+            "author_id": { "$ref": "#/$defs/id" },
+            "summary": { "$ref": "#/$defs/nonEmpty" },
+            "references": { "$ref": "#/$defs/repoRefs" }
+          }
+        },
+        "before": { "$ref": "#/$defs/snapshot" },
+        "after": { "$ref": "#/$defs/snapshot" },
+        "assessment": { "enum": ["IMPROVED", "NO_CHANGE", "REGRESSED"] },
+        "kept": { "type": "boolean" },
+        "targeted_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/check" }
+        },
+        "regression_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/check" }
+        }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer_id", "role", "independent", "disposition", "evidence"],
+      "properties": {
+        "reviewer_id": { "$ref": "#/$defs/id" },
+        "role": { "$ref": "#/$defs/id" },
+        "independent": { "type": "boolean" },
+        "disposition": { "enum": ["ACCEPT", "REJECT", "ABSTAIN"] },
+        "score": { "type": "number" },
+        "evidence": { "$ref": "#/$defs/nonEmpty" },
+        "evidence_refs": { "$ref": "#/$defs/repoRefs" },
+        "risk_tags_reviewed": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "rubricResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rubric_ref", "reviewer_id", "scores", "total"],
+      "properties": {
+        "rubric_ref": { "type": "string", "minLength": 1 },
+        "reviewer_id": { "$ref": "#/$defs/id" },
+        "scores": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "total": { "type": "number" }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "failure_key",
+        "criterion_ids",
+        "severity",
+        "status",
+        "attempts",
+        "summary"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "failure_key": { "$ref": "#/$defs/id" },
+        "criterion_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "severity": { "enum": ["P0", "P1", "P2", "P3"] },
+        "status": { "enum": ["CONFIRMED", "RESOLVED", "DEFERRED", "ESCALATED"] },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "discovered_iteration": { "type": "integer", "minimum": 0 },
+        "resolved_iteration": { "type": "integer", "minimum": 1 },
+        "summary": { "$ref": "#/$defs/nonEmpty" },
+        "resolution": { "$ref": "#/$defs/nonEmpty" },
+        "risk_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "finalFailure": {
+      "allOf": [
+        { "$ref": "#/$defs/failure" },
+        { "required": ["discovered_iteration"] },
+        {
+          "if": {
+            "required": ["status"],
+            "properties": { "status": { "const": "RESOLVED" } }
+          },
+          "then": { "required": ["resolved_iteration"] },
+          "else": { "not": { "required": ["resolved_iteration"] } }
+        }
+      ]
+    },
+    "continuity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_ref",
+        "evidence_status",
+        "build_status_ref",
+        "build_status_status",
+        "handoff_ref",
+        "handoff_status",
+        "checklist_ref",
+        "checklist_status"
+      ],
+      "properties": {
+        "evidence_ref": { "type": "string", "minLength": 1 },
+        "evidence_status": { "$ref": "#/$defs/continuityStatus" },
+        "build_status_ref": { "type": "string", "minLength": 1 },
+        "build_status_status": { "$ref": "#/$defs/continuityStatus" },
+        "handoff_ref": { "type": "string", "minLength": 1 },
+        "handoff_status": { "$ref": "#/$defs/continuityStatus" },
+        "checklist_ref": { "type": "string", "minLength": 1 },
+        "checklist_status": { "$ref": "#/$defs/continuityStatus" }
+      }
+    },
+    "continuityStatus": { "enum": ["RECONCILED", "UNCHANGED_REVIEWED"] },
+    "runLineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "predecessor_run_id",
+        "predecessor_contract_id",
+        "escalation_resolution_ref",
+        "carried_failure_keys",
+        "resolved_failure_keys"
+      ],
+      "properties": {
+        "predecessor_run_id": { "$ref": "#/$defs/id" },
+        "predecessor_contract_id": { "$ref": "#/$defs/id" },
+        "escalation_resolution_ref": { "type": "string", "minLength": 1 },
+        "carried_failure_keys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "resolved_failure_keys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "summary"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "severity": { "enum": ["P0", "P1", "P2", "P3"] },
+        "summary": { "$ref": "#/$defs/nonEmpty" },
+        "risk_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "references": { "$ref": "#/$defs/repoRefs" }
+      }
+    }
+  }
+}
