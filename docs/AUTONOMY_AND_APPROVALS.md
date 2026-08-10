@@ -41,3 +41,21 @@ Chief of Staff and specialists have no inherent access. A delegation is restrict
 ## Retries and recovery
 
 Writes require unique idempotency keys. Retry is bounded by the action contract, reauthorized at every attempt, and recorded. Level 5 actions will never auto-retry. Failed or cancelled actions remain visible and cannot be reported as success.
+
+Persistence & Execution v0.2 registers only one Level 3 local internal projection handler.
+The server constructs its worker actor, delegation, purpose, environment, and resource
+scope. Handling is authorized after claim and again immediately before the durable effect.
+Database-time leases use fencing tokens; an expired holder cannot complete after another
+worker reclaims the event. A consumer receipt, internal effect, delivery audit, delivered
+state, and transition record commit together.
+
+Retry stores typed redacted failure codes with deterministic bounded backoff. Exhausted or
+non-retryable events remain visible as `failed`. Recovery uses a separate owner-only
+permission, requires a typed actor/reason/correlation/idempotency command, stores its
+request digest and redacted result snapshot atomically, starts a new bounded cycle, and
+retains all prior history. Every initial or exact-replay invocation reauthorizes the
+current command/resource after idempotency serialization and before reading or disclosing
+a stored result. A denied replay returns no result and appends a denial audit.
+Changed-content key reuse conflicts and is audited. Execution status and failed-work reads
+use their own owner-scoped central permission. No v0.2 handler can call a live provider or
+perform a Level 4/5 action.

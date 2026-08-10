@@ -4,7 +4,7 @@ import json
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
-from typing import Never
+from typing import ClassVar, Never
 from uuid import uuid4
 
 from personal_os.application.commands import (
@@ -36,6 +36,7 @@ from personal_os.domain.errors import (
     NotFoundError,
     ValidationError,
 )
+from personal_os.domain.events import InternalEventType, OutboxEvent
 from personal_os.domain.provenance import (
     ConfirmationStatus,
     Provenance,
@@ -70,6 +71,22 @@ class PersonalOSService:
     BUFFER_MINUTES = 15
     CAPABILITY_MODE = "local-mock-synthetic"
     SYSTEM_ACTOR = "chief-of-staff-system"
+    INTERNAL_EVENTS: ClassVar[dict[str, tuple[InternalEventType, str]]] = {
+        "intent.captured": (InternalEventType.INTENT_CAPTURED, "captured"),
+        "intent.clarification_requested": (
+            InternalEventType.INTENT_CLARIFICATION_REQUESTED,
+            "needs_clarification",
+        ),
+        "commitment.created": (InternalEventType.COMMITMENT_CREATED, "captured"),
+        "schedule.no_feasible_proposal": (
+            InternalEventType.SCHEDULE_NO_FEASIBLE_PROPOSAL,
+            "waiting",
+        ),
+        "schedule.proposed": (InternalEventType.SCHEDULE_PROPOSED, "proposed"),
+        "schedule.approved": (InternalEventType.SCHEDULE_APPROVED, "approved"),
+        "schedule.rejected": (InternalEventType.SCHEDULE_REJECTED, "rejected"),
+        "schedule.changed": (InternalEventType.SCHEDULE_CHANGED, "superseded"),
+    }
 
     def __init__(
         self,
@@ -1093,27 +1110,39 @@ class PersonalOSService:
         summary: str,
         policy_result: str,
     ) -> None:
-        uow.audit.append(
-            AuditEvent(
-                id=self.id_factory(),
-                user_id=command.user_id,
-                action=action,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                correlation_id=command.correlation_id,
-                occurred_at=self.clock(),
-                outcome="denied",
-                source_type=SourceType.USER_STATED.value,
-                source_identifier=f"command:{command.idempotency_key}",
-                actor_id=command.user_id,
-                on_behalf_of_id=None,
-                entity_version=entity_version,
-                causation_id=command.idempotency_key,
-                policy_result=policy_result,
-                capability_mode=self.CAPABILITY_MODE,
-                summary=summary,
-                details={},
-            )
+        occurred_at = self.clock()
+        audit = AuditEvent(
+            id=self.id_factory(),
+            user_id=command.user_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            correlation_id=command.correlation_id,
+            occurred_at=occurred_at,
+            outcome="denied",
+            source_type=SourceType.USER_STATED.value,
+            source_identifier=f"command:{command.idempotency_key}",
+            actor_id=command.user_id,
+            on_behalf_of_id=None,
+            entity_version=entity_version,
+            causation_id=command.idempotency_key,
+            policy_result=policy_result,
+            capability_mode=self.CAPABILITY_MODE,
+            summary=summary,
+            details={},
+        )
+        uow.audit.append(audit)
+        self._enqueue_internal_event(
+            uow,
+            command,
+            InternalEventType.COMMAND_DENIED,
+            entity_type,
+            entity_id,
+            entity_version,
+            command.user_id,
+            None,
+            occurred_at,
+            {"state": "denied", "reason_code": policy_result},
         )
 
     def _provider_context(
@@ -1157,27 +1186,89 @@ class PersonalOSService:
     ) -> None:
         actor_id = command.user_id if source_type is SourceType.USER_STATED else self.SYSTEM_ACTOR
         on_behalf_of_id = None if actor_id == command.user_id else command.user_id
-        uow.audit.append(
-            AuditEvent(
-                id=self.id_factory(),
-                user_id=command.user_id,
-                action=action,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                correlation_id=command.correlation_id,
-                occurred_at=self.clock(),
-                outcome="succeeded",
-                source_type=source_type.value,
-                source_identifier=source_identifier,
+        occurred_at = self.clock()
+        audit = AuditEvent(
+            id=self.id_factory(),
+            user_id=command.user_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            correlation_id=command.correlation_id,
+            occurred_at=occurred_at,
+            outcome="succeeded",
+            source_type=source_type.value,
+            source_identifier=source_identifier,
+            actor_id=actor_id,
+            on_behalf_of_id=on_behalf_of_id,
+            entity_version=entity_version,
+            causation_id=command.idempotency_key,
+            policy_result=f"allowed:{self.policy.VERSION}",
+            capability_mode=self.CAPABILITY_MODE,
+            approval_id=approval_id,
+            agent_reference=self.SYSTEM_ACTOR,
+            summary=summary,
+            details=details or {},
+        )
+        uow.audit.append(audit)
+        event_definition = self.INTERNAL_EVENTS.get(action)
+        if event_definition is None:
+            raise RuntimeError(f"no canonical internal event is registered for {action}")
+        event_type, state = event_definition
+        self._enqueue_internal_event(
+            uow,
+            command,
+            event_type,
+            entity_type,
+            entity_id,
+            entity_version,
+            actor_id,
+            on_behalf_of_id,
+            occurred_at,
+            {"state": state, "result": "succeeded"},
+        )
+
+    def _enqueue_internal_event(
+        self,
+        uow: UnitOfWork,
+        command: CaptureIntentCommand | DecideProposalCommand,
+        event_type: InternalEventType,
+        aggregate_type: str,
+        aggregate_id: str,
+        aggregate_version: int,
+        actor_id: str,
+        on_behalf_of_id: str | None,
+        occurred_at: datetime,
+        payload: dict[str, str | int | bool | None],
+    ) -> None:
+        producer_key = self._digest(
+            {
+                "event_type": event_type.value,
+                "aggregate_type": aggregate_type,
+                "aggregate_id": aggregate_id,
+                "aggregate_version": aggregate_version,
+                "causation_id": command.idempotency_key,
+            }
+        )
+        uow.outbox.enqueue(
+            OutboxEvent(
+                id=f"event-{producer_key[:48]}",
+                event_type=event_type,
+                schema_version=1,
+                aggregate_type=aggregate_type,
+                aggregate_id=aggregate_id,
+                aggregate_version=aggregate_version,
+                owner_user_id=command.user_id,
+                controller_id=command.user_id,
+                data_subject_id=command.user_id,
                 actor_id=actor_id,
                 on_behalf_of_id=on_behalf_of_id,
-                entity_version=entity_version,
+                sensitivity="personal",
+                correlation_id=command.correlation_id,
                 causation_id=command.idempotency_key,
-                policy_result=f"allowed:{self.policy.VERSION}",
+                occurred_at=occurred_at,
                 capability_mode=self.CAPABILITY_MODE,
-                approval_id=approval_id,
-                agent_reference=self.SYSTEM_ACTOR,
-                summary=summary,
-                details=details or {},
+                producer_key=producer_key,
+                payload=payload,
+                available_at=occurred_at,
             )
         )

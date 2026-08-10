@@ -679,6 +679,35 @@ def test_complete_run_requires_exact_reconciled_continuity_and_evidence_run_id(
     assert any("evidence does not contain run_id" in error for error in run_errors)
 
 
+def test_finalized_historical_run_keeps_its_checklist_when_manifest_advances(
+    tmp_path: Path,
+) -> None:
+    contract = success_contract()
+    run = completed_run(contract)
+    errors, criteria, reviewers = validate_pair(tmp_path, contract, run)
+    assert errors == []
+    (tmp_path / "checklists/NEXT.md").write_text("# Next checklist\n", encoding="utf-8")
+    (tmp_path / "PROJECT_MANIFEST.yaml").write_text(
+        "checklists:\n"
+        "  active: checklists/NEXT.md\n"
+        "quality:\n"
+        "  current_run: quality/runs/next.yaml\n",
+        encoding="utf-8",
+    )
+
+    run_errors = validate_run(
+        run,
+        tmp_path / "quality/runs/run.yaml",
+        tmp_path,
+        contract,
+        tmp_path / "quality/contracts/contract.yaml",
+        criteria,
+        reviewers,
+    )
+
+    assert not any("checklist_ref: must equal manifest-selected" in error for error in run_errors)
+
+
 def test_active_legacy_run_remains_valid_until_final_lifecycle_reconciliation(
     tmp_path: Path,
 ) -> None:

@@ -1,0 +1,538 @@
+schema_version: 1
+run_id: qg-20260810-persistence-execution-v02-run-001
+contract_id: qg-20260810-persistence-execution-v02
+contract_path: quality/contracts/qg-20260810-persistence-execution-v02.yaml
+contract_sha256: f389abd334a7746c491c5fb618c535ac9c624edea2cf8bfb73cf9caac1a5aa66
+goal: >-
+  Establish PERSONAL OS Persistence & Execution Foundation v0.2 with PostgreSQL as
+  the production-semantic reference database and durable, recoverable event delivery,
+  while preserving every accepted Foundation v0.1 invariant.
+milestone: foundation-v0.2-persistence-execution
+started_at: "2026-08-10T20:20:00Z"
+status: COMPLETE
+builder_ids:
+  - root-builder
+repository_revision: e15b256cd3d632f4b9292b6c63819d75c8f19db1
+workspace_state: uncommitted
+references:
+  - PROJECT_MANIFEST.yaml
+  - docs/ARCHITECTURE.md
+  - docs/DATA_AND_MEMORY_MODEL.md
+  - docs/AUTONOMY_AND_APPROVALS.md
+  - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+  - docs/decisions/0004-relational-state-and-audit.md
+  - docs/decisions/0005-persistence-path.md
+  - docs/decisions/0011-bounded-quality-gauntlet.md
+  - docs/decisions/0012-postgresql-outbox-execution.md
+  - checklists/FOUNDATION_V0_1.md
+  - checklists/PERSISTENCE_EXECUTION_V0_2.md
+baseline:
+  summary: >-
+    Git tag foundation-v0.1-accepted is clean and the complete accepted regression is
+    green. Docker, psql, and pg_isready are unavailable; no PostgreSQL verification or
+    CI command exists; and no outbox, delivery, retry, lease, or recovery primitive exists.
+  quality_vector: [0, 2, 0, 0]
+  checks:
+    - criterion_id: REG-001
+      command: npm.cmd run verify
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        In 39.9 seconds, Ruff/ESLint, mypy/TypeScript, 57 backend unit tests, one
+        frontend test, 19 SQLite integration tests, production build, quality,
+        continuity, and both mock/synthetic demo flows passed.
+    - criterion_id: REG-002
+      command: npm.cmd run verify (demo:verify stage)
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        Scheduling, ambiguity, and deterministic finance flows passed in
+        local-mock-synthetic mode with an empty live_capabilities list.
+    - criterion_id: REG-003
+      command: npm.cmd run verify (test:integration stage)
+      exit_code: 0
+      result: PASS
+      evidence: Nineteen existing SQLite HTTP and persistence integration tests passed.
+    - criterion_id: CAP-001
+      command: npm.cmd run verify:postgresql
+      exit_code: 1
+      result: FAIL
+      evidence: >-
+        The command is absent at baseline; Docker, psql, and pg_isready are also
+        unavailable in the current local environment.
+    - criterion_id: CAP-006
+      command: npm.cmd run test:execution
+      exit_code: 1
+      result: FAIL
+      evidence: The command and transactional outbox/execution implementation are absent at baseline.
+    - criterion_id: CAP-010
+      command: Test-Path .github/workflows
+      exit_code: 0
+      result: FAIL
+      evidence: No CI workflow directory exists at baseline.
+iterations:
+  - number: 1
+    primary_failure_id: PE-F-003
+    repair:
+      author_id: root-builder
+      summary: >-
+        Made finalized quality runs retain their historical reconciled checklist after the
+        manifest advances, while the manifest-selected current run alone must bind the
+        active checklist; added a focused phase-advance regression test.
+      references:
+        - scripts/validate_quality.py
+        - backend/tests/unit/test_quality_validator.py
+    before:
+      quality_vector: [0, 3, 0, 0]
+      evidence: >-
+        Advancing the manifest made artifact validation reject the append-only completed
+        v0.1 hardening run because its historical checklist was not the new active checklist.
+    after:
+      quality_vector: [0, 2, 0, 0]
+      evidence: >-
+        Historical checklist references remain safe and resolvable, while only the current
+        run must match the manifest active checklist; all focused and continuity checks pass.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: REG-005
+        command: >-
+          node scripts/python.mjs -m pytest
+          backend/tests/unit/test_quality_validator.py -q
+        exit_code: 0
+        result: PASS
+        evidence: Thirty-one quality-validator tests passed, including manifest phase advance.
+      - criterion_id: REG-005
+        command: npm.cmd run validate:quality -- --artifacts-only
+        exit_code: 0
+        result: PASS
+        evidence: Two contracts and two runs validated after the manifest advanced.
+    regression_checks:
+      - criterion_id: REG-005
+        command: npm.cmd run validate:continuity
+        exit_code: 0
+        result: PASS
+        evidence: Manifest, active checklist, sources, handoff, evidence, ADRs, and links passed.
+  - number: 2
+    primary_failure_id: PE-F-002
+    repair:
+      author_id: root-builder
+      summary: >-
+        Added the canonical redacted internal-event contract, transactional outbox and
+        unit-of-work port, fenced database-time leases, atomic consumer receipts/effects/
+        audit/delivery, bounded retry and explicit recovery, two-stage worker policy
+        authorization, owner-scoped status APIs, and fail-closed local handlers.
+      references:
+        - docs/decisions/0013-canonical-events-and-fenced-execution.md
+        - backend/src/personal_os/domain/events.py
+        - backend/src/personal_os/adapters/persistence/repositories.py
+        - backend/src/personal_os/worker.py
+        - backend/tests/integration/test_execution.py
+    before:
+      quality_vector: [0, 2, 0, 0]
+      evidence: >-
+        No durable event, delivery lease, fencing token, idempotent consumer receipt,
+        bounded retry, failed-delivery visibility, or authorized recovery path existed.
+    after:
+      quality_vector: [0, 1, 0, 0]
+      evidence: >-
+        All nine focused execution scenarios pass, including rollback, one-effect
+        duplicate suppression, crash/restart reclaim, stale-worker fencing, bounded
+        retry/failure/recovery, policy reauthorization, and owner-scoped HTTP access.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-006
+        command: npm.cmd run test:execution
+        exit_code: 0
+        result: PASS
+        evidence: Nine transactional outbox and execution integration tests passed.
+      - criterion_id: CAP-007
+        command: npm.cmd run test:execution
+        exit_code: 0
+        result: PASS
+        evidence: Bounded retry, visible terminal failure, explicit audited recovery, and authorization checks passed.
+      - criterion_id: CAP-008
+        command: npm.cmd run test:execution
+        exit_code: 0
+        result: PASS
+        evidence: Crash/restart reclaim and stale-fencing scenarios produced exactly one retained effect.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run verify
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Repository safety, lint, strict types, 73 backend unit tests, one frontend
+          test, 28 SQLite integration tests, frontend build, structural PostgreSQL CI,
+          quality, continuity, and mock/synthetic demo all passed in 34.2 seconds.
+  - number: 3
+    primary_failure_id: PE-F-005
+    repair:
+      author_id: root-builder
+      summary: >-
+        Replaced PostgreSQL transaction-stable lease checks with clock_timestamp()
+        directly inside fenced delivery/failure updates, returned database-written
+        transition timestamps, and added deterministic adversarial tests that begin a
+        transaction before expiry and attempt delivery or failure after wall-clock expiry.
+      references:
+        - backend/src/personal_os/adapters/persistence/repositories.py
+        - backend/tests/postgresql/test_postgresql_persistence.py
+        - backend/tests/unit/test_dialect_boundaries.py
+    before:
+      quality_vector: [0, 4, 2, 0]
+      evidence: >-
+        Independent reviews found the existing PostgreSQL lease predicate could accept an
+        expired holder, plus separate historical-upgrade and operator-authority P1s and
+        two execution-contract P2s; real PostgreSQL remained unavailable.
+    after:
+      quality_vector: [0, 3, 2, 0]
+      evidence: >-
+        Two independent re-reviews confirmed the wall-clock defect and its false-positive
+        test shape are resolved in code, with no new P0/P1; three unrelated P1s and two
+        P2s remain and therefore prevent v0.2 acceptance.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-003
+        command: npm.cmd run test:postgresql
+        exit_code: 1
+        result: PARTIAL
+        evidence: >-
+          Twelve PostgreSQL tests, including both wall-clock variants, collect; execution
+          correctly refuses to run without a real PostgreSQL URL.
+      - criterion_id: CAP-008
+        command: npm.cmd run test:execution
+        exit_code: 0
+        result: PASS
+        evidence: Nine local crash, reclaim, fencing, retry, and delivery scenarios passed.
+      - criterion_id: CAP-009
+        command: npm.cmd run test:dialect-boundaries
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Six focused boundary tests passed and static compilation confirms direct
+          PostgreSQL clock_timestamp fencing predicates.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run verify
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Repository safety, lint/types, 73 backend unit tests, one frontend test, 28
+          SQLite integration tests, build, structural validators, continuity, and the
+          mock/synthetic demo passed in 40.4 seconds.
+final_checks:
+  - criterion_id: CAP-001
+    command: npm.cmd run verify:postgresql
+    exit_code: 1
+    result: FAIL
+    evidence: >-
+      No PostgreSQL URL/service exists, and review found the populated historical path
+      invokes a current-head-only CLI while intentionally at revision 0005.
+  - criterion_id: CAP-002
+    command: npm.cmd run test:postgresql
+    exit_code: 1
+    result: FAIL
+    evidence: Real PostgreSQL transaction rollback was not executed; SQLite substitution was refused.
+  - criterion_id: CAP-003
+    command: npm.cmd run test:postgresql
+    exit_code: 1
+    result: FAIL
+    evidence: PostgreSQL race and wall-clock tests collect but did not execute without a real service.
+  - criterion_id: CAP-004
+    command: npm.cmd run test:postgresql
+    exit_code: 1
+    result: FAIL
+    evidence: Durable PostgreSQL command and consumer duplicate behavior remains unexecuted.
+  - criterion_id: CAP-005
+    command: npm.cmd run test:postgresql
+    exit_code: 1
+    result: FAIL
+    evidence: >-
+      PostgreSQL authorization/audit evidence is absent, and execution read/recovery
+      surfaces do not yet meet the central-policy and idempotent-command contract.
+  - criterion_id: CAP-006
+    command: npm.cmd run test:execution
+    exit_code: 0
+    result: PASS
+    evidence: Local transactional mutation/audit/receipt/outbox commit and rollback scenarios passed.
+  - criterion_id: CAP-007
+    command: npm.cmd run test:execution
+    exit_code: 0
+    result: FAIL
+    evidence: >-
+      Local retry/failure/recovery behavior passes, but operator reads bypass policy and
+      recovery lacks a correlated idempotent application-command receipt.
+  - criterion_id: CAP-008
+    command: npm.cmd run test:execution
+    exit_code: 0
+    result: PASS
+    evidence: Local crash/restart reclaim, stale fencing, and one-effect tests passed.
+  - criterion_id: CAP-009
+    command: npm.cmd run test:dialect-boundaries
+    exit_code: 0
+    result: PARTIAL
+    evidence: Six static/dialect-isolation checks passed; real PostgreSQL semantics did not execute.
+  - criterion_id: CAP-010
+    command: npm.cmd run validate:postgresql-ci
+    exit_code: 0
+    result: FAIL
+    evidence: The PostgreSQL 17 workflow contract is valid but has no actual CI run result.
+  - criterion_id: REG-001
+    command: npm.cmd run verify
+    exit_code: 0
+    result: PASS
+    evidence: Full local regression passed with 73 backend unit, one frontend, and 28 integration tests.
+  - criterion_id: REG-002
+    command: npm.cmd run demo:verify
+    exit_code: 0
+    result: PASS
+    evidence: Both deterministic mock/synthetic flows passed with an empty live-capability list.
+  - criterion_id: REG-003
+    command: npm.cmd run test:integration
+    exit_code: 0
+    result: PASS
+    evidence: Twenty-eight explicitly SQLite local integration tests passed.
+  - criterion_id: REG-004
+    command: npm.cmd run test:unit
+    exit_code: 0
+    result: PASS
+    evidence: Seventy-three backend unit tests and one frontend test passed.
+  - criterion_id: REG-005
+    command: npm.cmd run validate:continuity
+    exit_code: 0
+    result: PASS
+    evidence: Final manifest, ADR, status, evidence, checklist, risk, and handoff records reconcile.
+  - criterion_id: REV-001
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Persistence architecture review rejected on the historical verifier and operator boundary P1s.
+  - criterion_id: REV-002
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Concurrency review resolved the wall-clock defect but rejected without real PostgreSQL evidence.
+  - criterion_id: REV-003
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Security review rejected the execution read/recovery authority gap and missing PostgreSQL evidence.
+  - criterion_id: REV-004
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Milestone reviewer rejected v0.2 completion and endorsed COMPLETE/ESCALATE only.
+reviewers:
+  - reviewer_id: faraday-persistence-v02
+    role: persistence-architecture
+    independent: true
+    disposition: REJECT
+    evidence: >-
+      Local verification and lease re-review passed, but the populated historical verifier
+      is self-contradictory and execution operator surfaces violate command/query invariants.
+    evidence_refs:
+      - scripts/verify_postgresql.py
+      - backend/src/personal_os/interfaces/http/app.py
+      - backend/src/personal_os/worker.py
+    risk_tags_reviewed: [architecture, side-effects]
+  - reviewer_id: mendel-concurrency-v02
+    role: concurrency-reliability
+    independent: true
+    disposition: REJECT
+    evidence: >-
+      Direct clock_timestamp fencing and robust adversarial test design are accepted with
+      no remaining code-level timestamp finding; real PostgreSQL concurrency execution is absent.
+    evidence_refs:
+      - backend/src/personal_os/adapters/persistence/repositories.py
+      - backend/tests/postgresql/test_postgresql_persistence.py
+    risk_tags_reviewed: [architecture, agent-autonomy, side-effects]
+  - reviewer_id: security-authorization-v02
+    role: security-authorization
+    independent: true
+    disposition: REJECT
+    evidence: >-
+      Positive local fail-closed, redaction, worker and owner-isolation controls pass, but
+      execution reads bypass central policy, recovery lacks a receipt-bound command, and
+      PostgreSQL security semantics are unexecuted.
+    evidence_refs:
+      - spec/permissions.yaml
+      - backend/src/personal_os/application/policy.py
+      - backend/src/personal_os/interfaces/http/app.py
+    risk_tags_reviewed: [security, permissions, data-access, agent-autonomy]
+  - reviewer_id: anscombe-milestone-v02
+    role: milestone-acceptance
+    independent: true
+    disposition: REJECT
+    evidence: >-
+      Foundation v0.1 remains green and no capability became live, but mandatory
+      PostgreSQL evidence and three P1 controls are absent; COMPLETE/ESCALATE is supported.
+    evidence_refs:
+      - docs/EVIDENCE.md
+      - docs/BUILD_STATUS.md
+      - checklists/PERSISTENCE_EXECUTION_V0_2.md
+    risk_tags_reviewed: [architecture, security, permissions, side-effects]
+failures:
+  - id: PE-F-001
+    failure_key: postgresql-production-semantics-unverified
+    discovered_iteration: 0
+    criterion_ids:
+      - CAP-001
+      - CAP-002
+      - CAP-003
+      - CAP-004
+      - CAP-005
+      - CAP-009
+      - CAP-010
+    severity: P1
+    status: CONFIRMED
+    attempts: 0
+    summary: >-
+      A strict disposable-database verifier, PostgreSQL-focused suite, and PostgreSQL 17
+      CI workflow now exist, but no real PostgreSQL service or remote CI execution is
+      available in this workspace. Production migration, transaction, race, locking,
+      authorization, audit, approval, and delivery semantics therefore remain unverified.
+    risk_tags:
+      - architecture
+      - security
+      - permissions
+      - data-access
+  - id: PE-F-002
+    failure_key: durable-event-delivery-absent
+    discovered_iteration: 0
+    criterion_ids:
+      - CAP-006
+      - CAP-007
+      - CAP-008
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    resolved_iteration: 2
+    summary: >-
+      No transactional outbox, idempotent consumer claim, bounded retry, failed-delivery
+      visibility, lease recovery, or crash/restart behavior exists.
+    resolution: >-
+      The previously absent delivery substrate now provides canonical transactional
+      enqueue, finite local handlers, durable receipts, bounded retry, visible failure,
+      fenced reclaim, and deterministic local crash coverage. Newly discovered operator
+      command/query gaps are tracked separately as PE-F-006.
+    risk_tags:
+      - architecture
+      - agent-autonomy
+      - side-effects
+  - id: PE-F-003
+    failure_key: finalized-run-checklist-drift
+    discovered_iteration: 1
+    resolved_iteration: 1
+    criterion_ids:
+      - REG-005
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    summary: >-
+      Artifact validation incorrectly required a finalized historical run to replace its
+      append-only checklist reference whenever the manifest active phase changed.
+    resolution: >-
+      Current-run selection now scopes active-checklist equality; historical references
+      remain immutable, safe, and resolvable.
+    risk_tags:
+      - architecture
+      - evidence
+  - id: PE-F-004
+    failure_key: historical-upgrade-verifier-head-conflict
+    discovered_iteration: 3
+    criterion_ids: [CAP-001]
+    severity: P1
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      The verifier upgrades to accepted v0.1 revision 0005 and then calls fixtures-load,
+      whose runtime guard requires current revision 0007, so populated upgrade cannot run.
+    risk_tags: [architecture]
+  - id: PE-F-005
+    failure_key: postgresql-lease-uses-transaction-time
+    discovered_iteration: 3
+    resolved_iteration: 3
+    criterion_ids: [CAP-003, CAP-007, CAP-008, CAP-009]
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    summary: >-
+      Transaction-stable CURRENT_TIMESTAMP could let a transaction started before expiry
+      record delivery/failure after wall-clock lease expiry.
+    resolution: >-
+      PostgreSQL fenced updates now compare directly with clock_timestamp(), return the
+      database-written transition time, and have robust deliver/failure adversarial tests.
+    risk_tags: [architecture, agent-autonomy, side-effects]
+  - id: PE-F-006
+    failure_key: execution-operator-authority-contract-incomplete
+    discovered_iteration: 3
+    criterion_ids: [CAP-005, CAP-007]
+    severity: P1
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      Execution status/failed reads bypass central policy, while recovery lacks a typed,
+      correlated, idempotency-digested application command and durable replay receipt.
+    risk_tags: [security, permissions, agent-autonomy, side-effects]
+  - id: PE-F-007
+    failure_key: claim-transition-preauthorization-label
+    discovered_iteration: 3
+    criterion_ids: [CAP-007]
+    severity: P2
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      Claim history labels the lease mutation allowed before the processor performs its
+      first central authorization decision; durable effects remain reauthorized twice.
+    risk_tags: [security, permissions, agent-autonomy]
+  - id: PE-F-008
+    failure_key: handler-effect-envelope-binding-unvalidated
+    discovered_iteration: 3
+    criterion_ids: [CAP-006, CAP-007]
+    severity: P2
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      The processor does not independently bind every handler-produced effect identifier,
+      owner, consumer, and event reference back to the claimed envelope.
+    risk_tags: [architecture, side-effects]
+remaining_risks:
+  - id: PE-R-001
+    severity: P1
+    summary: Real PostgreSQL and CI production semantics remain wholly unexecuted.
+    risk_tags: [architecture, security, permissions, data-access, side-effects]
+    references:
+      - docs/RISK_REGISTER.md
+      - scripts/verify_postgresql.py
+  - id: PE-R-002
+    severity: P1
+    summary: Historical upgrade verification is structurally self-defeating at revision 0005.
+    risk_tags: [architecture]
+    references: [scripts/verify_postgresql.py]
+  - id: PE-R-003
+    severity: P1
+    summary: Execution operator read/recovery authority and replay contracts are incomplete.
+    risk_tags: [security, permissions, agent-autonomy, side-effects]
+    references:
+      - backend/src/personal_os/interfaces/http/app.py
+      - backend/src/personal_os/worker.py
+  - id: PE-R-004
+    severity: P2
+    summary: Preauthorization claim labeling and handler-effect binding need hardening.
+    risk_tags: [architecture, security, permissions, agent-autonomy, side-effects]
+    references:
+      - backend/src/personal_os/adapters/persistence/repositories.py
+      - backend/src/personal_os/worker.py
+continuity:
+  evidence_ref: docs/EVIDENCE.md
+  evidence_status: RECONCILED
+  build_status_ref: docs/BUILD_STATUS.md
+  build_status_status: RECONCILED
+  handoff_ref: docs/HANDOFF.md
+  handoff_status: RECONCILED
+  checklist_ref: checklists/PERSISTENCE_EXECUTION_V0_2.md
+  checklist_status: RECONCILED
+final_disposition: ESCALATE
+completed_at: "2026-08-10T21:26:06Z"

@@ -1,0 +1,536 @@
+schema_version: 1
+run_id: qg-20260810-persistence-execution-v02-run-002
+contract_id: qg-20260810-persistence-execution-v02
+contract_path: quality/contracts/qg-20260810-persistence-execution-v02.yaml
+contract_sha256: f389abd334a7746c491c5fb618c535ac9c624edea2cf8bfb73cf9caac1a5aa66
+goal: >-
+  Establish PERSONAL OS Persistence & Execution Foundation v0.2 with PostgreSQL as
+  the production-semantic reference database and durable, recoverable event delivery,
+  while preserving every accepted Foundation v0.1 invariant.
+milestone: foundation-v0.2-persistence-execution
+started_at: "2026-08-10T21:31:09Z"
+status: COMPLETE
+builder_ids:
+  - root-builder
+repository_revision: e15b256cd3d632f4b9292b6c63819d75c8f19db1
+workspace_state: uncommitted
+lineage:
+  predecessor_run_id: qg-20260810-persistence-execution-v02-run-001
+  predecessor_contract_id: qg-20260810-persistence-execution-v02
+  escalation_resolution_ref: docs/HANDOFF.md
+  carried_failure_keys:
+    - postgresql-production-semantics-unverified
+    - historical-upgrade-verifier-head-conflict
+    - execution-operator-authority-contract-incomplete
+    - claim-transition-preauthorization-label
+    - handler-effect-envelope-binding-unvalidated
+  resolved_failure_keys: []
+references:
+  - PROJECT_MANIFEST.yaml
+  - docs/ARCHITECTURE.md
+  - docs/DATA_AND_MEMORY_MODEL.md
+  - docs/AUTONOMY_AND_APPROVALS.md
+  - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+  - docs/decisions/0012-postgresql-outbox-execution.md
+  - docs/decisions/0013-canonical-events-and-fenced-execution.md
+  - quality/runs/qg-20260810-persistence-execution-v02.yaml
+  - checklists/PERSISTENCE_EXECUTION_V0_2.md
+baseline:
+  summary: >-
+    The predecessor run ended COMPLETE/ESCALATE after improving the local execution
+    substrate and PostgreSQL lease fencing. Foundation v0.1 regression remains green,
+    while three P1 and two P2 failures are carried without reset. Real PostgreSQL and CI
+    execution remain unavailable in the workspace.
+  quality_vector: [0, 3, 2, 0]
+  checks:
+    - criterion_id: REG-001
+      command: npm.cmd run verify
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        Final predecessor reconciliation passed repository safety, lint, strict types,
+        73 backend unit tests, one frontend test, 28 SQLite integration tests, build,
+        structural validators, continuity, and deterministic mock/synthetic demo.
+    - criterion_id: CAP-001
+      command: npm.cmd run verify:postgresql
+      exit_code: 1
+      result: FAIL
+      evidence: >-
+        No real PostgreSQL URL/service exists and the historical verifier contains the
+        carried current-head CLI conflict.
+    - criterion_id: CAP-007
+      command: npm.cmd run test:execution
+      exit_code: 0
+      result: FAIL
+      evidence: >-
+        Nine local delivery tests pass, but execution reads and recovery do not yet meet
+        central-policy, correlation, idempotency-digest, and durable-receipt requirements.
+    - criterion_id: CAP-010
+      command: npm.cmd run validate:postgresql-ci
+      exit_code: 0
+      result: FAIL
+      evidence: The workflow contract is valid but no actual PostgreSQL CI run exists.
+iterations:
+  - number: 1
+    primary_failure_id: PE-F-004
+    repair:
+      author_id: root-builder
+      summary: >-
+        Replaced the impossible current-head CLI fixture call at Alembic revision 0005
+        with a verifier-owned, revision-pinned synthetic seed and explicit pre/post
+        preservation assertions for representative fact, finance, audit, commitment,
+        proposal, approval, receipt, and provenance state.
+      references:
+        - scripts/verify_postgresql.py
+        - backend/tests/unit/test_dialect_boundaries.py
+    before:
+      quality_vector: [0, 3, 2, 0]
+      evidence: >-
+        The populated-upgrade path intentionally held the schema at revision 0005 but
+        invoked the current application CLI, whose exact-head guard required revision
+        0007, so execution could never reach the upgrade-under-data assertion.
+    after:
+      quality_vector: [0, 2, 2, 0]
+      evidence: >-
+        The historical path now uses only explicit columns present at the immutable 0005
+        revision, requires a non-empty representative snapshot before upgrading, and
+        asserts that the same state survives at head. Real PostgreSQL execution remains
+        separately open as PE-F-001.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-009
+        command: npm.cmd run test:dialect-boundaries
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Eight boundary tests passed, including guards against current-CLI use in the
+          historical path and incomplete or mutated v0.1 upgrade evidence.
+      - criterion_id: CAP-001
+        command: npm.cmd run verify:postgresql
+        exit_code: 1
+        result: PARTIAL
+        evidence: >-
+          The verifier reaches its deliberate fail-closed environment gate and refuses
+          substitution without PERSONAL_OS_POSTGRES_TEST_URL; a real service is still
+          unavailable, but the prior internal head conflict is removed.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run verify
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Repository safety, lint, strict types, 75 backend unit tests, one frontend
+          test, 28 SQLite integration tests, frontend build, structural validators,
+          continuity, and the deterministic mock/synthetic demo passed in 35.6 seconds.
+  - number: 2
+    primary_failure_id: PE-F-006
+    repair:
+      author_id: root-builder
+      summary: >-
+        Added a purpose/environment/owner-bound central permission for execution reads
+        and converted recovery to a typed correlated command with canonical digest,
+        transaction-scoped idempotency serialization, durable event/result receipt,
+        exact replay, changed-content denial audit, and migration 0008.
+      references:
+        - backend/migrations/versions/0008_execution_operator_receipts.py
+        - backend/src/personal_os/application/commands.py
+        - backend/src/personal_os/application/policy.py
+        - backend/src/personal_os/worker.py
+        - backend/src/personal_os/interfaces/http/app.py
+        - backend/tests/integration/test_execution.py
+        - backend/tests/postgresql/test_postgresql_persistence.py
+    before:
+      quality_vector: [0, 2, 2, 0]
+      evidence: >-
+        Status and failed-work reads reached repositories directly, while recovery accepted
+        loose parameters and could neither replay a durable result nor reject changed
+        content under the same idempotency key.
+    after:
+      quality_vector: [0, 1, 2, 0]
+      evidence: >-
+        Every operator read now crosses central policy. Recovery atomically stores one
+        transition, audit, request digest, event binding, and redacted result snapshot;
+        exact retries remain identical after the event advances, mutations conflict and
+        audit, and a PostgreSQL advisory key lock serializes concurrent exact requests.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-007
+        command: npm.cmd run test:execution
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Nine execution scenarios passed, including owner-read denials, correlated
+          recovery, exact replay after event advancement, mutated-key conflict, one
+          recovery transition, and one durable receipt.
+      - criterion_id: CAP-004
+        command: .venv/Scripts/python.exe -m pytest backend/tests/postgresql --collect-only -q
+        exit_code: 0
+        result: PARTIAL
+        evidence: >-
+          Thirteen real-PostgreSQL tests collect, including concurrent same-key recovery
+          with one receipt/result/transition; execution still requires the unavailable
+          real PostgreSQL service.
+      - criterion_id: CAP-009
+        command: npm.cmd run test:dialect-boundaries
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Eight dialect-boundary tests passed with runtime head bound to immutable
+          migration 0008 and no SQLite substitution for PostgreSQL acceptance.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run verify
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Repository safety, lint, strict types, 76 backend unit tests, one frontend
+          test, 28 SQLite integration tests, build, structural validators, continuity,
+          and deterministic mock/synthetic demo passed in 34.6 seconds.
+  - number: 3
+    primary_failure_id: PE-F-001
+    repair:
+      author_id: root-builder
+      summary: >-
+        Provisioned a checksum-pinned, loopback-only PostgreSQL 17.10 runtime and executed
+        the strict clean/populated-upgrade verifier. Real execution exposed and repaired
+        overlong unaccepted v0.2 revision identifiers and dependent effect/receipt flush
+        ordering while preserving accepted migrations 0001 through 0005 unchanged.
+      references:
+        - scripts/verify_postgresql.py
+        - backend/migrations/versions/0006_postgresql_audit_immutability.py
+        - backend/migrations/versions/0007_transactional_outbox_execution.py
+        - backend/migrations/versions/0008_execution_operator_receipts.py
+        - backend/src/personal_os/adapters/persistence/repositories.py
+        - backend/tests/postgresql/test_postgresql_persistence.py
+    before:
+      quality_vector: [0, 3, 2, 0]
+      evidence: >-
+        PostgreSQL production semantics were unexecuted. The final real-runtime and
+        independent review pass also isolated two separate P1 gates: no actual hosted CI
+        result and exact recovery replay returning before current authorization.
+    after:
+      quality_vector: [0, 2, 2, 0]
+      evidence: >-
+        PostgreSQL 17.10 now proves clean zero-to-head migration, populated accepted-v0.1
+        0005-to-0008 preservation, no-op repeat migration, two idempotent fixture loads,
+        and all thirteen PostgreSQL tests. Hosted CI and recovery replay reauthorization
+        remain independently identified P1 blockers.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-001
+        command: npm.cmd run verify:postgresql
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Strict PostgreSQL verification passed with historical_upgrade=passed,
+          migration_passes=2, fixtures_loads=2, and thirteen PostgreSQL tests.
+      - criterion_id: CAP-003
+        command: npm.cmd run test:postgresql
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Real PostgreSQL CAS, overlap serialization, controlled race denial, SKIP LOCKED
+          claims, fencing, expiry, duplicate delivery, and concurrent recovery passed.
+      - criterion_id: CAP-005
+        command: null
+        exit_code: null
+        result: PARTIAL
+        evidence: >-
+          PostgreSQL isolation, audit immutability, approval/idempotency, and first-call
+          policy checks passed, but independent replay probing found PE-F-010.
+      - criterion_id: CAP-009
+        command: npm.cmd run test:dialect-boundaries
+        exit_code: 0
+        result: PASS
+        evidence: Eight dialect-boundary tests passed after real PostgreSQL repairs.
+      - criterion_id: CAP-010
+        command: npm.cmd run validate:postgresql-ci
+        exit_code: 0
+        result: FAIL
+        evidence: >-
+          Workflow structure is valid and invokes the proven command, but no remote or
+          actual hosted CI run exists; structural inspection is not CI execution evidence.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run verify
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Repository safety, lint, strict types, 76 backend unit tests, one frontend test,
+          28 SQLite integration tests, build, validators, continuity, and the local
+          mock/synthetic demo passed in 74.9 seconds.
+final_checks:
+  - criterion_id: CAP-001
+    command: npm.cmd run verify:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Clean, populated-upgrade, repeat-migration, fixture, and PostgreSQL suite passed.
+  - criterion_id: CAP-002
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Transaction rollback retained no partial state, audit, receipt, approval, block, or event.
+  - criterion_id: CAP-003
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: PostgreSQL concurrency tests produced controlled one-winner outcomes.
+  - criterion_id: CAP-004
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Exact retries replayed once, mutations conflicted, and duplicate delivery retained one effect.
+  - criterion_id: CAP-005
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Exact recovery replay returns its stored result before current central authorization.
+  - criterion_id: CAP-006
+    command: npm.cmd run test:execution
+    exit_code: 0
+    result: PASS
+    evidence: Nine local atomic outbox/effect scenarios passed.
+  - criterion_id: CAP-007
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Recovery is durable and bounded, but exact replay is not reauthorized.
+  - criterion_id: CAP-008
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Crash/restart reclaim and stale fencing produced one eventual effect.
+  - criterion_id: CAP-009
+    command: npm.cmd run test:dialect-boundaries
+    exit_code: 0
+    result: PASS
+    evidence: Eight checks isolate dialect semantics and bind runtime head to revision 0008.
+  - criterion_id: CAP-010
+    command: npm.cmd run validate:postgresql-ci
+    exit_code: 0
+    result: FAIL
+    evidence: The workflow contract passes structurally, but no actual hosted CI run exists.
+  - criterion_id: REG-001
+    command: npm.cmd run verify
+    exit_code: 0
+    result: PASS
+    evidence: Full accepted-baseline regression passed after the v0.2 implementation.
+  - criterion_id: REG-002
+    command: npm.cmd run demo:verify
+    exit_code: 0
+    result: PASS
+    evidence: Both mock/synthetic flows passed with live_capabilities empty.
+  - criterion_id: REG-003
+    command: npm.cmd run test:integration
+    exit_code: 0
+    result: PASS
+    evidence: Twenty-eight explicitly lightweight SQLite integration tests passed.
+  - criterion_id: REG-004
+    command: npm.cmd run test:unit
+    exit_code: 0
+    result: PASS
+    evidence: Seventy-six backend unit tests and one frontend test passed.
+  - criterion_id: REG-005
+    command: npm.cmd run validate:continuity
+    exit_code: 0
+    result: PASS
+    evidence: Final run, status, evidence, checklist, risks, manifest, and handoff reconcile.
+  - criterion_id: REV-001
+    command: null
+    exit_code: null
+    result: PASS
+    evidence: Independent persistence-architecture review accepted with no P0/P1.
+  - criterion_id: REV-002
+    command: null
+    exit_code: null
+    result: PASS
+    evidence: Independent concurrency-reliability review accepted with no P0/P1.
+  - criterion_id: REV-003
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Independent security review rejected exact replay before reauthorization.
+  - criterion_id: REV-004
+    command: null
+    exit_code: null
+    result: FAIL
+    evidence: Independent milestone review requires ESCALATE for two P1 gates.
+reviewers:
+  - reviewer_id: faraday-persistence-architecture-run002-20260810
+    role: persistence-architecture
+    independent: true
+    disposition: ACCEPT
+    evidence: >-
+      Unique-database PostgreSQL 17.10 verification, migration inspection, local execution,
+      dialect, unit, and aggregate gates passed with no P0/P1 architecture finding.
+    evidence_refs:
+      - scripts/verify_postgresql.py
+      - backend/src/personal_os/adapters/persistence/repositories.py
+      - backend/src/personal_os/worker.py
+    risk_tags_reviewed: [architecture, security, permissions, data-access, agent-autonomy, side-effects]
+  - reviewer_id: lamport-concurrency-r002-7f3c
+    role: concurrency-reliability
+    independent: true
+    disposition: ACCEPT
+    evidence: >-
+      Thirteen isolated PostgreSQL tests plus adversarial recovery/backoff probes accepted
+      race, retry, fencing, duplicate, recovery, and controlled-conflict behavior.
+    evidence_refs:
+      - backend/tests/postgresql/test_postgresql_persistence.py
+      - backend/tests/integration/test_execution.py
+      - backend/src/personal_os/worker.py
+    risk_tags_reviewed: [architecture, agent-autonomy, side-effects]
+  - reviewer_id: security-authorization-r2-20260810-2309
+    role: security-authorization
+    independent: true
+    disposition: REJECT
+    evidence: >-
+      PostgreSQL/security regressions passed, but an allow-then-deny policy probe proved
+      exact recovery replay returns before a current recovery authorization decision.
+    evidence_refs:
+      - backend/src/personal_os/worker.py
+      - docs/AUTONOMY_AND_APPROVALS.md
+      - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+    risk_tags_reviewed: [security, permissions, data-access, agent-autonomy]
+  - reviewer_id: anscombe-milestone-r002-20260810-2219
+    role: milestone-acceptance
+    independent: true
+    disposition: REJECT
+    evidence: >-
+      Real PostgreSQL and all Foundation regressions pass with no live capability, but
+      CAP-005/CAP-007 replay authorization and CAP-010 hosted CI evidence remain P1.
+    evidence_refs:
+      - quality/contracts/qg-20260810-persistence-execution-v02.yaml
+      - backend/src/personal_os/worker.py
+      - .github/workflows/postgresql.yml
+    risk_tags_reviewed: [architecture, security, permissions, data-access, agent-autonomy, side-effects]
+failures:
+  - id: PE-F-001
+    failure_key: postgresql-production-semantics-unverified
+    discovered_iteration: 0
+    criterion_ids: [CAP-001, CAP-002, CAP-003, CAP-004, CAP-005, CAP-009]
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    resolved_iteration: 3
+    summary: >-
+      No real PostgreSQL service proves production migration, transaction, concurrency,
+      authorization, audit, approval, idempotency, or delivery semantics.
+    resolution: >-
+      A checksum-pinned loopback PostgreSQL 17.10 runtime and three independent isolated
+      database reruns now prove clean and populated migrations, fixtures, transactions,
+      races, locking, audit immutability, idempotency, and bounded delivery. Hosted CI is
+      retained separately as PE-F-009 rather than misrepresented as local evidence.
+    risk_tags: [architecture, security, permissions, data-access, side-effects]
+  - id: PE-F-004
+    failure_key: historical-upgrade-verifier-head-conflict
+    discovered_iteration: 0
+    criterion_ids: [CAP-001]
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    resolved_iteration: 1
+    summary: >-
+      The verifier upgrades to revision 0005 and calls fixtures-load, whose runtime guard
+      requires current revision 0007, so populated historical upgrade cannot run.
+    resolution: >-
+      The verifier now seeds a representative dataset through revision-pinned SQL,
+      validates its provenance, audit, approval, and receipt contract before upgrading,
+      and asserts exact preservation afterward without weakening the runtime head guard.
+    risk_tags: [architecture]
+  - id: PE-F-006
+    failure_key: execution-operator-authority-contract-incomplete
+    discovered_iteration: 0
+    criterion_ids: [CAP-005, CAP-007]
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    resolved_iteration: 2
+    summary: >-
+      Execution reads bypass central policy, while recovery lacks a typed, correlated,
+      idempotency-digested application command and durable replay receipt.
+    resolution: >-
+      Owner-scoped reads now cross a dedicated central permission. Recovery is a typed
+      correlated command with a canonical digest and atomically durable result receipt;
+      exact retries replay, changed-content reuse conflicts and audits, and PostgreSQL
+      concurrent retries serialize on the idempotency key.
+    risk_tags: [security, permissions, agent-autonomy, side-effects]
+  - id: PE-F-007
+    failure_key: claim-transition-preauthorization-label
+    discovered_iteration: 0
+    criterion_ids: [CAP-007]
+    severity: P2
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      Claim history labels lease mutation allowed before the processor performs its first
+      central authorization decision.
+    risk_tags: [security, permissions, agent-autonomy]
+  - id: PE-F-008
+    failure_key: handler-effect-envelope-binding-unvalidated
+    discovered_iteration: 0
+    criterion_ids: [CAP-006, CAP-007]
+    severity: P2
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      The processor does not independently bind every handler-produced effect identifier,
+      owner, consumer, and event reference to the claimed canonical envelope.
+    risk_tags: [architecture, side-effects]
+  - id: PE-F-009
+    failure_key: actual-postgresql-ci-run-unavailable
+    discovered_iteration: 3
+    criterion_ids: [CAP-010]
+    severity: P1
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      The PostgreSQL 17 workflow contract is structurally valid and invokes the locally
+      proven strict command, but the repository has no remote or actual hosted CI run.
+    risk_tags: [architecture]
+  - id: PE-F-010
+    failure_key: recovery-exact-replay-skips-central-policy
+    discovered_iteration: 3
+    criterion_ids: [CAP-005, CAP-007]
+    severity: P1
+    status: ESCALATED
+    attempts: 0
+    summary: >-
+      A matching recovery idempotency receipt is replayed before the current recovery
+      policy decision, so revoked authority can still receive the stored command result.
+    risk_tags: [security, permissions, data-access]
+remaining_risks:
+  - id: PE2-R-001
+    severity: P1
+    summary: Actual hosted PostgreSQL CI execution remains unavailable.
+    risk_tags: [architecture]
+    references: [.github/workflows/postgresql.yml]
+  - id: PE2-R-002
+    severity: P1
+    summary: Exact recovery replay does not reauthorize before returning the stored result.
+    risk_tags: [security, permissions, data-access]
+    references: [backend/src/personal_os/worker.py]
+  - id: PE2-R-003
+    severity: P2
+    summary: Claim history uses an allowed label before the first policy decision.
+    risk_tags: [security, permissions, agent-autonomy]
+    references: [backend/src/personal_os/adapters/persistence/repositories.py]
+  - id: PE2-R-004
+    severity: P2
+    summary: Handler-produced effects are not independently bound to the claimed envelope.
+    risk_tags: [architecture, side-effects]
+    references: [backend/src/personal_os/worker.py]
+continuity:
+  evidence_ref: docs/EVIDENCE.md
+  evidence_status: RECONCILED
+  build_status_ref: docs/BUILD_STATUS.md
+  build_status_status: RECONCILED
+  handoff_ref: docs/HANDOFF.md
+  handoff_status: RECONCILED
+  checklist_ref: checklists/PERSISTENCE_EXECUTION_V0_2.md
+  checklist_status: RECONCILED
+final_disposition: ESCALATE
+completed_at: "2026-08-10T22:20:38Z"

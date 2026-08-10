@@ -1,0 +1,138 @@
+schema_version: 1
+run_id: qg-20260810-persistence-execution-v02-run-004
+contract_id: qg-20260810-persistence-execution-v02
+contract_path: quality/contracts/qg-20260810-persistence-execution-v02.yaml
+contract_sha256: f389abd334a7746c491c5fb618c535ac9c624edea2cf8bfb73cf9caac1a5aa66
+goal: >-
+  Establish PERSONAL OS Persistence & Execution Foundation v0.2 with PostgreSQL as
+  the production-semantic reference database and durable, recoverable event delivery,
+  while preserving every accepted Foundation v0.1 invariant.
+milestone: foundation-v0.2-persistence-execution
+started_at: "2026-08-10T23:08:49Z"
+status: ACTIVE
+builder_ids:
+  - root-builder
+repository_revision: e15b256cd3d632f4b9292b6c63819d75c8f19db1
+workspace_state: uncommitted
+lineage:
+  predecessor_run_id: qg-20260810-persistence-execution-v02-run-003
+  predecessor_contract_id: qg-20260810-persistence-execution-v02
+  escalation_resolution_ref: docs/HANDOFF.md
+  carried_failure_keys:
+    - actual-postgresql-ci-run-unavailable
+    - claim-transition-preauthorization-label
+    - handler-effect-envelope-binding-unvalidated
+    - recovery-advisory-lock-unbounded-wait
+  resolved_failure_keys: []
+references:
+  - PROJECT_MANIFEST.yaml
+  - docs/ARCHITECTURE.md
+  - docs/DATA_AND_MEMORY_MODEL.md
+  - docs/AUTONOMY_AND_APPROVALS.md
+  - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+  - docs/decisions/0012-postgresql-outbox-execution.md
+  - docs/decisions/0013-canonical-events-and-fenced-execution.md
+  - quality/runs/qg-20260810-persistence-execution-v02-run-003.yaml
+  - checklists/PERSISTENCE_EXECUTION_V0_2.md
+baseline:
+  summary: >-
+    Run 003 ended COMPLETE/ESCALATE after resolving recovery replay authorization and
+    proving every local and isolated PostgreSQL gate. The user has now supplied an empty
+    GitHub destination and explicit authority to configure origin, commit, push, and run
+    hosted CI. One P1 and three P2 failures carry forward without reset; actual hosted
+    PostgreSQL CI remains the first required evaluation.
+  quality_vector: [0, 1, 3, 0]
+  checks:
+    - criterion_id: REG-001
+      command: npm.cmd run verify
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        The frozen run-003 tree passed repository safety, lint, strict types, 76 backend
+        unit tests, one frontend test, 29 SQLite integration tests, build, validators,
+        continuity, and both mock/synthetic demo flows in 39.3 seconds.
+    - criterion_id: CAP-001
+      command: npm.cmd run verify:postgresql
+      exit_code: 0
+      result: PASS
+      evidence: >-
+        PostgreSQL 17.10 passed clean zero-to-0008, populated accepted-0005-to-0008
+        preservation, repeat migration, two fixture loads, and fourteen focused tests.
+    - criterion_id: CAP-010
+      command: npm.cmd run validate:postgresql-ci
+      exit_code: 0
+      result: FAIL
+      evidence: >-
+        Workflow structure passes and the empty GitHub destination is reachable, but no
+        branch has yet been pushed and no actual hosted PostgreSQL result exists.
+iterations: []
+final_checks: []
+reviewers: []
+failures:
+  - id: PE-F-009
+    failure_key: actual-postgresql-ci-run-unavailable
+    discovered_iteration: 0
+    criterion_ids: [CAP-010]
+    severity: P1
+    status: CONFIRMED
+    attempts: 0
+    summary: >-
+      The PostgreSQL 17 workflow contract and identical local command pass, but the
+      authorized GitHub destination has not yet produced an actual hosted CI result.
+    risk_tags: [architecture]
+  - id: PE-F-007
+    failure_key: claim-transition-preauthorization-label
+    discovered_iteration: 0
+    criterion_ids: [CAP-007]
+    severity: P2
+    status: CONFIRMED
+    attempts: 0
+    summary: >-
+      Claim history labels lease mutation allowed before the processor performs its first
+      central authorization decision.
+    risk_tags: [security, permissions, agent-autonomy]
+  - id: PE-F-008
+    failure_key: handler-effect-envelope-binding-unvalidated
+    discovered_iteration: 0
+    criterion_ids: [CAP-006, CAP-007]
+    severity: P2
+    status: CONFIRMED
+    attempts: 0
+    summary: >-
+      The processor does not independently bind every handler-produced effect identifier,
+      owner, consumer, event reference, effect type, and payload to the claimed envelope.
+    risk_tags: [architecture, side-effects]
+  - id: PE-F-011
+    failure_key: recovery-advisory-lock-unbounded-wait
+    discovered_iteration: 0
+    criterion_ids: [CAP-007]
+    severity: P2
+    status: CONFIRMED
+    attempts: 0
+    summary: >-
+      Recovery's transaction-scoped PostgreSQL advisory lock has no scoped lock timeout,
+      so a wedged open transaction could leave an operator request waiting indefinitely.
+    risk_tags: [architecture, agent-autonomy]
+remaining_risks:
+  - id: PE4-R-001
+    severity: P1
+    summary: Actual hosted PostgreSQL CI execution remains unproven until the authorized branch runs.
+    risk_tags: [architecture]
+    references: [.github/workflows/postgresql.yml]
+  - id: PE4-R-002
+    severity: P2
+    summary: Claim history uses an allowed label before the first policy decision.
+    risk_tags: [security, permissions, agent-autonomy]
+    references: [backend/src/personal_os/adapters/persistence/repositories.py]
+  - id: PE4-R-003
+    severity: P2
+    summary: Handler-produced effects are not independently bound to the claimed envelope.
+    risk_tags: [architecture, side-effects]
+    references: [backend/src/personal_os/worker.py]
+  - id: PE4-R-004
+    severity: P2
+    summary: Recovery advisory-lock acquisition has no scoped timeout for a wedged transaction.
+    risk_tags: [architecture, agent-autonomy]
+    references: [backend/src/personal_os/adapters/persistence/repositories.py]
+final_disposition: null
+completed_at: null

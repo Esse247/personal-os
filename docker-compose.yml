@@ -26,6 +26,7 @@ services:
       PERSONAL_OS_PROVIDER_MODE: mock
       PERSONAL_OS_DATABASE_URL: postgresql+psycopg://personal_os:personal_os_local_only@postgres:5432/personal_os
       PERSONAL_OS_BIND_HOST: 127.0.0.1
+      PERSONAL_OS_AUTO_INITIALIZE: "false"
     command:
       - /bin/sh
       - -c

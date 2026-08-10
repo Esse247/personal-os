@@ -170,6 +170,39 @@ permissions:
     approval: none
     environments: [development, test]
     audit: fixture_import_event
+  - id: outbox.event.handle.internal.own
+    resource: outbox_event
+    action: handle_allowlisted_internal_event
+    allowed_principals: [server_created_worker]
+    relationship: worker_delegation_matches_controller
+    sensitivity_max: personal
+    consent_required: inherited_from_authoritative_command_and_rechecked
+    max_action_level: 3
+    approval: inherited_no_new_authority
+    environments: [development, test]
+    audit: required
+  - id: outbox.event.read.internal.own
+    resource: outbox_event
+    action: read_local_execution_state
+    allowed_principals: [owning_human_operator]
+    relationship: controller_is_principal
+    sensitivity_max: personal
+    consent_required: false
+    max_action_level: 0
+    approval: none
+    environments: [development, test]
+    audit: access_log
+  - id: outbox.event.recover.internal.own
+    resource: outbox_event
+    action: start_new_bounded_attempt_cycle
+    allowed_principals: [owning_human_operator]
+    relationship: controller_is_principal
+    sensitivity_max: personal
+    consent_required: false
+    max_action_level: 3
+    approval: explicit_recovery_command_with_reason
+    environments: [development, test]
+    audit: required
   - id: high_risk.execute
     resource: financial_legal_identity_health_irreversible_action
     action: execute

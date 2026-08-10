@@ -15,6 +15,13 @@ from personal_os.domain.entities import (
     TransactionClassification,
     WorldFact,
 )
+from personal_os.domain.events import (
+    ConsumerReceipt,
+    InternalEffect,
+    OutboxEvent,
+    OutboxStatus,
+    OutboxTransition,
+)
 
 
 class IntentRepository(Protocol):
@@ -43,6 +50,7 @@ class BlockRepository(Protocol):
 class CommandReceiptRepository(Protocol):
     def add(self, entity: CommandReceipt) -> None: ...
     def get(self, idempotency_key: str) -> CommandReceipt | None: ...
+    def lock_key(self, idempotency_key: str) -> None: ...
 
 
 class ApprovalRepository(Protocol):
@@ -78,6 +86,53 @@ class AuditRepository(Protocol):
     def list_for_user(self, user_id: str, limit: int = 100) -> list[AuditEvent]: ...
 
 
+class OutboxRepository(Protocol):
+    def enqueue(self, event: OutboxEvent) -> None: ...
+    def get(self, event_id: str) -> OutboxEvent | None: ...
+    def claim_next(self, worker_id: str, lease_seconds: int) -> OutboxEvent | None: ...
+    def mark_delivered(
+        self,
+        event_id: str,
+        worker_id: str,
+        lease_token: str,
+        *,
+        duplicate_suppressed: bool = False,
+    ) -> OutboxEvent: ...
+    def record_failure(
+        self,
+        event_id: str,
+        worker_id: str,
+        lease_token: str,
+        failure_code: str,
+        *,
+        retryable: bool,
+        policy_result: str,
+    ) -> OutboxEvent: ...
+    def recover(
+        self,
+        event_id: str,
+        actor_id: str,
+        reason: str,
+        policy_result: str,
+    ) -> OutboxEvent: ...
+    def list_failed(self, owner_user_id: str) -> list[OutboxEvent]: ...
+    def status_counts(self, owner_user_id: str) -> dict[OutboxStatus, int]: ...
+
+
+class ConsumerReceiptRepository(Protocol):
+    def add(self, receipt: ConsumerReceipt) -> None: ...
+    def get(self, consumer_name: str, event_id: str) -> ConsumerReceipt | None: ...
+
+
+class InternalEffectRepository(Protocol):
+    def add(self, effect: InternalEffect) -> None: ...
+    def get_for_event(self, consumer_name: str, event_id: str) -> InternalEffect | None: ...
+
+
+class OutboxTransitionRepository(Protocol):
+    def list_for_event(self, event_id: str) -> list[OutboxTransition]: ...
+
+
 class UnitOfWork(Protocol):
     intents: IntentRepository
     commitments: CommitmentRepository
@@ -90,6 +145,10 @@ class UnitOfWork(Protocol):
     transactions: TransactionRepository
     classifications: ClassificationRepository
     audit: AuditRepository
+    outbox: OutboxRepository
+    consumer_receipts: ConsumerReceiptRepository
+    internal_effects: InternalEffectRepository
+    outbox_transitions: OutboxTransitionRepository
 
     def __enter__(self) -> UnitOfWork: ...
     def __exit__(self, *args: object) -> None: ...

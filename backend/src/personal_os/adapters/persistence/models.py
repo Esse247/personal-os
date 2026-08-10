@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -205,6 +215,17 @@ class AuditEventRow(Base):
 
 class CommandReceiptRow(Base):
     __tablename__ = "command_receipts"
+    __table_args__ = (
+        CheckConstraint(
+            "(outbox_event_id IS NULL AND result_json IS NULL) OR "
+            "(outbox_event_id IS NOT NULL AND result_json IS NOT NULL)",
+            name="ck_command_receipt_outbox_result_pair",
+        ),
+        CheckConstraint(
+            "result_json IS NULL OR length(result_json) <= 2048",
+            name="ck_command_receipt_result_size",
+        ),
+    )
 
     idempotency_key: Mapped[str] = mapped_column(String(128), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(64), index=True)
@@ -215,3 +236,153 @@ class CommandReceiptRow(Base):
     commitment_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     proposal_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     replacement_proposal_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    outbox_event_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("outbox_events.id"), nullable=True, index=True
+    )
+    result_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class OutboxEventRow(Base):
+    __tablename__ = "outbox_events"
+    __table_args__ = (
+        UniqueConstraint("producer_key", name="uq_outbox_event_producer_key"),
+        CheckConstraint("schema_version = 1", name="ck_outbox_schema_version"),
+        CheckConstraint("aggregate_version >= 0", name="ck_outbox_aggregate_version"),
+        CheckConstraint(
+            "sensitivity IN ('public', 'household_shared', 'personal', 'financial', "
+            "'health', 'identity', 'legal')",
+            name="ck_outbox_sensitivity",
+        ),
+        CheckConstraint(
+            "capability_mode = 'local-mock-synthetic'",
+            name="ck_outbox_capability_mode",
+        ),
+        CheckConstraint(
+            "event_type IN ('intent.captured.v1', 'intent.clarification_requested.v1', "
+            "'commitment.created.v1', 'schedule.no_feasible_proposal.v1', "
+            "'schedule.proposed.v1', 'schedule.approved.v1', "
+            "'schedule.rejected.v1', 'schedule.changed.v1', 'command.denied.v1')",
+            name="ck_outbox_event_type",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'processing', 'retry', 'delivered', 'failed')",
+            name="ck_outbox_status",
+        ),
+        CheckConstraint(
+            "attempt_count >= 0 AND attempt_count <= max_attempts "
+            "AND max_attempts BETWEEN 1 AND 10",
+            name="ck_outbox_attempt_budget",
+        ),
+        CheckConstraint("cycle >= 0", name="ck_outbox_cycle"),
+        CheckConstraint("length(payload_json) <= 2048", name="ck_outbox_payload_size"),
+        CheckConstraint(
+            "(status = 'processing' AND lease_owner IS NOT NULL "
+            "AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL) OR "
+            "(status <> 'processing' AND lease_owner IS NULL "
+            "AND lease_token IS NULL AND lease_expires_at IS NULL)",
+            name="ck_outbox_lease_state",
+        ),
+        CheckConstraint(
+            "(status IN ('retry', 'failed') AND last_failure_code IS NOT NULL) OR "
+            "(status NOT IN ('retry', 'failed') AND last_failure_code IS NULL)",
+            name="ck_outbox_failure_state",
+        ),
+        CheckConstraint(
+            "(status = 'delivered' AND delivered_at IS NOT NULL) OR "
+            "(status <> 'delivered' AND delivered_at IS NULL)",
+            name="ck_outbox_delivery_state",
+        ),
+        Index("ix_outbox_eligible", "status", "available_at", "occurred_at"),
+        Index("ix_outbox_owner_status", "owner_user_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(80), index=True)
+    schema_version: Mapped[int] = mapped_column(Integer)
+    aggregate_type: Mapped[str] = mapped_column(String(80))
+    aggregate_id: Mapped[str] = mapped_column(String(64), index=True)
+    aggregate_version: Mapped[int] = mapped_column(Integer)
+    owner_user_id: Mapped[str] = mapped_column(String(64), index=True)
+    controller_id: Mapped[str] = mapped_column(String(64))
+    data_subject_id: Mapped[str] = mapped_column(String(64))
+    actor_id: Mapped[str] = mapped_column(String(64))
+    on_behalf_of_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    sensitivity: Mapped[str] = mapped_column(String(32))
+    correlation_id: Mapped[str] = mapped_column(String(64), index=True)
+    causation_id: Mapped[str] = mapped_column(String(128), index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    capability_mode: Mapped[str] = mapped_column(String(64))
+    producer_key: Mapped[str] = mapped_column(String(128))
+    payload_json: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    cycle: Mapped[int] = mapped_column(Integer, default=0)
+    lease_owner: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class OutboxTransitionRow(Base):
+    __tablename__ = "outbox_transitions"
+    __table_args__ = (
+        UniqueConstraint("event_id", "sequence", name="uq_outbox_transition_sequence"),
+        CheckConstraint("sequence >= 1", name="ck_outbox_transition_sequence"),
+        CheckConstraint("cycle >= 0", name="ck_outbox_transition_cycle"),
+        CheckConstraint("attempt_number >= 0", name="ck_outbox_transition_attempt"),
+        CheckConstraint(
+            "transition IN ('claimed', 'reclaimed', 'retry_scheduled', "
+            "'delivered', 'failed', 'recovered', 'duplicate_suppressed')",
+            name="ck_outbox_transition_type",
+        ),
+        Index("ix_outbox_transition_event_time", "event_id", "occurred_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("outbox_events.id"), index=True)
+    sequence: Mapped[int] = mapped_column(Integer)
+    cycle: Mapped[int] = mapped_column(Integer)
+    attempt_number: Mapped[int] = mapped_column(Integer)
+    transition: Mapped[str] = mapped_column(String(32))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    worker_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    actor_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    policy_result: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(240), nullable=True)
+
+
+class ConsumerReceiptRow(Base):
+    __tablename__ = "consumer_receipts"
+    __table_args__ = (
+        UniqueConstraint("consumer_name", "event_id", name="uq_consumer_event_receipt"),
+    )
+
+    consumer_name: Mapped[str] = mapped_column(String(120), primary_key=True)
+    event_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("outbox_events.id"), primary_key=True
+    )
+    effect_id: Mapped[str] = mapped_column(String(64), ForeignKey("internal_effects.id"))
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class InternalEffectRow(Base):
+    __tablename__ = "internal_effects"
+    __table_args__ = (
+        UniqueConstraint("consumer_name", "event_id", name="uq_internal_effect_consumer_event"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    consumer_name: Mapped[str] = mapped_column(String(120))
+    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("outbox_events.id"), index=True)
+    owner_user_id: Mapped[str] = mapped_column(String(64), index=True)
+    effect_type: Mapped[str] = mapped_column(String(120))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload_json: Mapped[str] = mapped_column(Text)

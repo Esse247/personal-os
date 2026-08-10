@@ -4,6 +4,16 @@
 
 The database stores current relational state plus append-only history. The LLM context is a disposable, permission-filtered view, never memory or authority. Operational logs are diagnostic and are not the audit ledger.
 
+The long-term shared world model is one logical permission-controlled knowledge surface,
+not a globally readable agent memory. Domain ownership, controller/data-subject scope,
+sensitivity, consent, purpose, validity, and provenance are enforced before a specialist,
+Chief of Staff synthesis, model, or tool receives a view.
+
+Candidate insights, executive syntheses, expected-action evidence, outcome verifications,
+and learning records are separate typed records. They reference source evidence rather than
+copying unrestricted payloads, expire or supersede explicitly, and never become facts,
+permissions, approvals, or completed actions merely because a model produced them.
+
 ## Provenance envelope
 
 Every observation, intent, inference, prediction, fact, provider result, and classification preserves:
@@ -40,4 +50,16 @@ Application APIs provide no update or delete operation for audit events. Hash ch
 
 ## Current persistence
 
-SQLite is the zero-service local default. SQLAlchemy mappings and Alembic migrations preserve a PostgreSQL path, and Docker Compose defines PostgreSQL for reproducibility. Module-owned tables use opaque IDs rather than cross-module ORM graph traversal.
+SQLite is the zero-service local default. PostgreSQL 17 is the v0.2 production-semantic
+reference and Alembic is its only bootstrap path. Consequential application mutations,
+audit, command/approval evidence, and finite canonical redacted outbox events share a
+transaction. Module-owned tables use opaque IDs and typed contracts rather than
+cross-module ORM graph traversal. The outbox is event-driven plumbing for future selective
+reasoning; it is not a continuous model-call scheduler.
+
+Execution recovery receipts bind the owner, command type, canonical request digest,
+outbox event ID, and a size-bounded redacted result snapshot. The event transition, audit,
+and receipt commit together, so exact retries can replay without repeating recovery and
+mutated key reuse cannot silently create another attempt cycle. The snapshot is disclosed
+only after current recovery authorization; revocation produces a denial audit and a
+non-enumerating response instead of a replay.

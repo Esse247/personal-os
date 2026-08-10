@@ -104,6 +104,10 @@ def test_migration_applies_from_zero_and_reruns_safely(tmp_path: Path) -> None:
         "transaction_classifications",
         "audit_events",
         "command_receipts",
+        "outbox_events",
+        "outbox_transitions",
+        "consumer_receipts",
+        "internal_effects",
         "alembic_version",
     } <= tables
 
@@ -155,6 +159,25 @@ def test_migration_revisions_are_pinned_and_upgrade_historical_schema(tmp_path: 
             },
         )
 
+    command.upgrade(config, "0005_calendar_snapshot_binding")
+    with historical_engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO command_receipts "
+                "(idempotency_key, user_id, command_type, request_digest, created_at, "
+                "intent_id, commitment_id, proposal_id, replacement_proposal_id) "
+                "VALUES (:key, :user_id, :command_type, :digest, :created_at, "
+                "NULL, NULL, NULL, NULL)"
+            ),
+            {
+                "key": "historical-receipt-key",
+                "user_id": "legacy-synthetic-user",
+                "command_type": "historical_probe",
+                "digest": "a" * 64,
+                "created_at": datetime(2026, 8, 10, tzinfo=UTC),
+            },
+        )
+
     command.upgrade(config, "head")
     head_columns = {item["name"] for item in inspect(historical_engine).get_columns("approvals")}
     assert {
@@ -166,14 +189,31 @@ def test_migration_revisions_are_pinned_and_upgrade_historical_schema(tmp_path: 
         "calendar_snapshot_version",
     } <= head_columns
     assert "command_receipts" in inspect(historical_engine).get_table_names()
+    receipt_columns = {
+        item["name"] for item in inspect(historical_engine).get_columns("command_receipts")
+    }
+    assert {"outbox_event_id", "result_json"} <= receipt_columns
+    assert {
+        "outbox_events",
+        "outbox_transitions",
+        "consumer_receipts",
+        "internal_effects",
+    } <= set(inspect(historical_engine).get_table_names())
     with historical_engine.connect() as connection:
         migrated_provenance = json.loads(
             connection.execute(
                 text("SELECT provenance_json FROM world_facts WHERE id = 'legacy-world-fact'")
             ).scalar_one()
         )
+        historical_receipt = connection.execute(
+            text(
+                "SELECT request_digest, outbox_event_id, result_json "
+                "FROM command_receipts WHERE idempotency_key = 'historical-receipt-key'"
+            )
+        ).one()
     assert migrated_provenance["actor_id"] == "legacy-synthetic-user"
     assert migrated_provenance["correlation_id"] == "migration-0004"
+    assert historical_receipt == ("a" * 64, None, None)
 
 
 def test_proposal_repository_uses_compare_and_swap(engine: Engine) -> None:

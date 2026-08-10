@@ -11,7 +11,11 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Engine
 
-from personal_os.adapters.persistence.database import create_database_engine, initialize_schema
+from personal_os.adapters.persistence.database import (
+    assert_postgresql_schema_current,
+    create_database_engine,
+    initialize_schema,
+)
 from personal_os.adapters.persistence.repositories import create_uow_factory
 from personal_os.adapters.providers.mock import (
     DeterministicMockCalendarProvider,
@@ -21,6 +25,7 @@ from personal_os.application.commands import (
     CaptureIntentCommand,
     DecideProposalCommand,
     ProposalDecision,
+    RecoverOutboxEventCommand,
 )
 from personal_os.application.queries import DashboardQuery
 from personal_os.application.services import PersonalOSService
@@ -35,6 +40,7 @@ from personal_os.domain.errors import (
     ProhibitedCapabilityError,
     ValidationError,
 )
+from personal_os.domain.events import OutboxStatus
 from personal_os.fixtures import load_synthetic_fixtures
 from personal_os.interfaces.http.schemas import (
     CaptureRequest,
@@ -42,11 +48,14 @@ from personal_os.interfaces.http.schemas import (
     DashboardResponse,
     DecisionRequest,
     DecisionResponse,
+    ExecutionEventView,
+    ExecutionRecoveryRequest,
     commitment_view,
     intent_view,
     proposal_view,
 )
 from personal_os.observability import configure_logging
+from personal_os.worker import OutboxProcessor
 
 
 def create_app(settings: Settings | None = None, engine: Engine | None = None) -> FastAPI:
@@ -59,6 +68,8 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     async def lifespan(application: FastAPI):
         if current_settings.auto_initialize:
             initialize_schema(database_engine)
+        else:
+            assert_postgresql_schema_current(database_engine)
         uow_factory = create_uow_factory(database_engine)
         if current_settings.auto_initialize:
             load_synthetic_fixtures(uow_factory)
@@ -70,6 +81,10 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
         )
         application.state.dashboard = DashboardQuery(
             uow_factory, provider_mode=current_settings.provider_mode
+        )
+        application.state.outbox_processor = OutboxProcessor(
+            uow_factory=uow_factory,
+            environment=("test" if current_settings.environment == "test" else "development"),
         )
         yield
 
@@ -158,6 +173,8 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     def capabilities() -> dict[str, object]:
         return {
             "phase": "foundation-v0.1",
+            "accepted_capability_baseline": "foundation-v0.1",
+            "engineering_phase": "foundation-v0.2-persistence-execution",
             "live_capabilities": [],
             "capabilities": CAPABILITIES,
         }
@@ -171,6 +188,64 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
             "identity_mode": "DEVELOPMENT PERSONA",
             "external_actions": "PROHIBITED",
         }
+
+    @application.get("/v1/execution/status")
+    def execution_status(request: Request) -> dict[str, object]:
+        processor: OutboxProcessor = request.app.state.outbox_processor
+        counts = processor.status_for_owner(actor_id=actor_id(), owner_user_id=actor_id())
+        return {
+            "mode": "LOCAL INTERNAL ONLY",
+            "external_actions": "PROHIBITED",
+            "counts": {status.value: counts[status] for status in OutboxStatus},
+        }
+
+    @application.get("/v1/execution/failed", response_model=list[ExecutionEventView])
+    def failed_execution(request: Request) -> list[ExecutionEventView]:
+        processor: OutboxProcessor = request.app.state.outbox_processor
+        return [
+            ExecutionEventView(
+                id=event.id,
+                event_type=event.event_type.value,
+                status=event.status.value,
+                attempt_count=event.attempt_count,
+                max_attempts=event.max_attempts,
+                cycle=event.cycle,
+                last_failure_code=event.last_failure_code,
+                occurred_at=event.occurred_at,
+            )
+            for event in processor.failed_for_owner(actor_id=actor_id(), owner_user_id=actor_id())
+        ]
+
+    @application.post(
+        "/v1/execution/{event_id}/recover",
+        response_model=ExecutionEventView,
+    )
+    def recover_execution(
+        event_id: str,
+        body: ExecutionRecoveryRequest,
+        request: Request,
+        idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=128),
+    ) -> ExecutionEventView:
+        processor: OutboxProcessor = request.app.state.outbox_processor
+        event = processor.recover_failed(
+            RecoverOutboxEventCommand(
+                user_id=actor_id(),
+                event_id=event_id,
+                reason=body.reason,
+                correlation_id=request.state.correlation_id,
+                idempotency_key=idempotency_key,
+            )
+        )
+        return ExecutionEventView(
+            id=event.id,
+            event_type=event.event_type.value,
+            status=event.status.value,
+            attempt_count=event.attempt_count,
+            max_attempts=event.max_attempts,
+            cycle=event.cycle,
+            last_failure_code=event.last_failure_code,
+            occurred_at=event.occurred_at,
+        )
 
     @application.post("/v1/intents", response_model=CaptureResponse, status_code=201)
     def capture_intent(

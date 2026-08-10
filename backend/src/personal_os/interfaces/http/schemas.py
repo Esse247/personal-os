@@ -80,6 +80,21 @@ class DecisionRequest(BaseModel):
     requested_start: datetime | None = None
 
 
+class ExecutionRecoveryRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=240)
+
+
+class ExecutionEventView(BaseModel):
+    id: str
+    event_type: str
+    status: str
+    attempt_count: int
+    max_attempts: int
+    cycle: int
+    last_failure_code: str | None
+    occurred_at: datetime
+
+
 class DecisionResponse(BaseModel):
     proposal: ProposalView
     replacement: ProposalView | None

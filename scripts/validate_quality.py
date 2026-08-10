@@ -967,6 +967,7 @@ def _validate_continuity(
     value: Any,
     *,
     root: Path,
+    run_path: Path,
     label: str,
     run_id: str | None,
     required: bool,
@@ -1000,15 +1001,26 @@ def _validate_continuity(
         root / "PROJECT_MANIFEST.yaml", "PROJECT_MANIFEST.yaml", errors
     )
     active_checklist: Any = None
+    current_run: Any = None
     if manifest is not None:
         checklists = manifest.get("checklists")
         if isinstance(checklists, dict):
             active_checklist = checklists.get("active")
+        quality = manifest.get("quality")
+        if isinstance(quality, dict):
+            current_run = quality.get("current_run")
+    normalized_run_path = (
+        run_path.relative_to(root).as_posix()
+        if run_path.is_relative_to(root)
+        else run_path.as_posix()
+    )
+    enforce_current_checklist = not isinstance(current_run, str) or (
+        normalized_run_path == current_run.replace("\\", "/")
+    )
     expected_refs = {
         "evidence_ref": "docs/EVIDENCE.md",
         "build_status_ref": "docs/BUILD_STATUS.md",
         "handoff_ref": "docs/HANDOFF.md",
-        "checklist_ref": active_checklist,
     }
     for ref_key, expected_ref in expected_refs.items():
         reference = continuity.get(ref_key)
@@ -1020,6 +1032,15 @@ def _validate_continuity(
                     f"{label}.{ref_key}: must equal manifest-selected reference "
                     f"'{expected_ref}'"
                 )
+    checklist_ref = continuity.get("checklist_ref")
+    _safe_repo_reference(root, checklist_ref, f"{label}.checklist_ref", errors)
+    if isinstance(checklist_ref, str) and enforce_current_checklist:
+        normalized = checklist_ref.replace("\\", "/")
+        if not isinstance(active_checklist, str) or normalized != active_checklist:
+            errors.append(
+                f"{label}.checklist_ref: must equal manifest-selected reference "
+                f"'{active_checklist}'"
+            )
     for status_key in (
         "evidence_status",
         "build_status_status",
@@ -1738,6 +1759,7 @@ def validate_run(
     _validate_continuity(
         payload.get("continuity"),
         root=root,
+        run_path=path,
         label=f"{label}.continuity",
         run_id=run_id,
         required=status == "COMPLETE",

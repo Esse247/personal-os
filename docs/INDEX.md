@@ -27,9 +27,10 @@ Start with `../PROJECT_MANIFEST.yaml`; it is the compact machine-readable map an
 - [Risk register](RISK_REGISTER.md)
 - [Decision records](decisions/README.md)
 - [Foundation checklist](../checklists/FOUNDATION_V0_1.md)
+- [Persistence & Execution Foundation v0.2 checklist](../checklists/PERSISTENCE_EXECUTION_V0_2.md)
 - [Quality gauntlet protocol](../quality/README.md)
-- [Current quality contract](../quality/contracts/qg-20260810-operating-rules.yaml)
-- [Current quality run](../quality/runs/qg-20260810-operating-rules.yaml)
+- [Current quality contract](../quality/contracts/qg-20260810-persistence-execution-v02.yaml)
+- [Current quality run](../quality/runs/qg-20260810-persistence-execution-v02-run-004.yaml)
 
 ## Command map
 
@@ -41,6 +42,10 @@ After setup, commands are run from the repository root.
 | Develop | `powershell -ExecutionPolicy Bypass -File scripts/dev.ps1` | `./scripts/dev.sh` |
 | Full verification | `npm run verify` | `npm run verify` |
 | Quality artifact validation | `npm run validate:quality` | `npm run validate:quality` |
+| PostgreSQL clean verification | `npm run verify:postgresql` | `npm run verify:postgresql` |
+| Durable execution tests | `npm run test:execution` | `npm run test:execution` |
+| Process one local internal event | `npm run execution:once` | `npm run execution:once` |
+| List failed local internal events | `npm run execution:failed` | `npm run execution:failed` |
 | Dependency advisory scan (network) | `npm run audit:dependencies` | `npm run audit:dependencies` |
 | Local demonstration | `npm run demo:verify` | `npm run demo:verify` |
 | Migration | `npm run db:migrate` | `npm run db:migrate` |

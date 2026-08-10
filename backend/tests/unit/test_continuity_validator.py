@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+import yaml
 from scripts.validate_continuity import check_local_links, validate_repository
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -42,8 +43,10 @@ def test_missing_manifest_target_is_detected(tmp_path: Path) -> None:
 def test_wrong_build_phase_is_detected(tmp_path: Path) -> None:
     root = copy_continuity_tree(tmp_path / "phase")
     status = root / "docs" / "BUILD_STATUS.md"
+    manifest = yaml.safe_load((root / "PROJECT_MANIFEST.yaml").read_text(encoding="utf-8"))
+    phase_label = manifest["project"]["phase_label"]
     status.write_text(
-        status.read_text(encoding="utf-8").replace("Foundation v0.1", "Unknown phase"),
+        status.read_text(encoding="utf-8").replace(phase_label, "Unknown phase"),
         encoding="utf-8",
     )
     assert any(

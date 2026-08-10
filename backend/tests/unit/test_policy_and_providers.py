@@ -142,6 +142,20 @@ def test_foundation_configuration_fails_closed_for_live_or_remote_mode(
         Settings().validate_foundation_mode()
 
 
+def test_postgresql_configuration_requires_migrations_and_explicit_boolean(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database_url = "postgresql+psycopg://personal_os:personal_os_local_only@localhost/personal_os"
+    with pytest.raises(ProhibitedCapabilityError, match="Alembic bootstrap"):
+        Settings(database_url=database_url).validate_foundation_mode()
+    Settings(database_url=database_url, auto_initialize=False).validate_foundation_mode()
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("PERSONAL_OS_AUTO_INITIALIZE", "sometimes")
+    with pytest.raises(ProhibitedCapabilityError, match="explicit boolean"):
+        Settings.from_environment()
+
+
 def test_worker_is_policy_gated_and_cannot_expand_to_external_action() -> None:
     worker = FoundationWorker()
     allowed = JobEnvelope(

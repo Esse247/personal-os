@@ -235,6 +235,8 @@ def test_household_membership_does_not_expose_other_person_data(client: TestClie
 def test_capability_and_status_surfaces_cannot_claim_live(client: TestClient) -> None:
     capabilities = client.get("/v1/system/capabilities").json()
     assert capabilities["phase"] == "foundation-v0.1"
+    assert capabilities["accepted_capability_baseline"] == "foundation-v0.1"
+    assert capabilities["engineering_phase"] == "foundation-v0.2-persistence-execution"
     assert capabilities["live_capabilities"] == []
     assert all(item["status"] != "live" for item in capabilities["capabilities"].values())
     status = client.get("/v1/system/status").json()
@@ -244,6 +246,16 @@ def test_capability_and_status_surfaces_cannot_claim_live(client: TestClient) ->
         "data_mode": "SYNTHETIC",
         "identity_mode": "DEVELOPMENT PERSONA",
         "external_actions": "PROHIBITED",
+    }
+    execution = client.get("/v1/execution/status").json()
+    assert execution["mode"] == "LOCAL INTERNAL ONLY"
+    assert execution["external_actions"] == "PROHIBITED"
+    assert set(execution["counts"]) == {
+        "pending",
+        "processing",
+        "retry",
+        "delivered",
+        "failed",
     }
 
 

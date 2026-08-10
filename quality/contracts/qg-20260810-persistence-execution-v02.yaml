@@ -1,0 +1,281 @@
+schema_version: 1
+contract_id: qg-20260810-persistence-execution-v02
+goal: >-
+  Establish PERSONAL OS Persistence & Execution Foundation v0.2 with PostgreSQL as
+  the production-semantic reference database and durable, recoverable event delivery,
+  while preserving every accepted Foundation v0.1 invariant.
+milestone: foundation-v0.2-persistence-execution
+created_at: "2026-08-10T20:20:00Z"
+owner_role: root-builder
+scope:
+  in:
+    - PostgreSQL-first clean bootstrap, ordered migrations, and deterministic fixtures
+    - PostgreSQL persistence, transaction, concurrency, authorization, provenance, audit, approval, and idempotency verification
+    - explicit detection and removal of accidental SQLite/PostgreSQL semantic assumptions
+    - transactional outbox delivery with idempotent handlers and duplicate tolerance
+    - bounded retries, failed-delivery visibility, concurrency protection, and crash/restart recovery
+    - repeatable CI using a real PostgreSQL service
+    - architecture, security, ADR, checklist, evidence, status, and handoff reconciliation
+  out:
+    - live banking, email, calendar, model, wearable, or other provider integrations
+    - real household, financial, health, identity, or credential data
+    - production identity, session, consent-product, retention, or deletion implementation
+    - unrestricted autonomous agents or recursive job creation
+    - Level 4 or Level 5 live execution and production financial actions
+    - removal of the intentional lightweight SQLite local-test path
+iteration_budget: 3
+risk_tags:
+  - architecture
+  - security
+  - permissions
+  - data-access
+  - agent-autonomy
+  - side-effects
+references:
+  - PROJECT_MANIFEST.yaml
+  - docs/ARCHITECTURE.md
+  - docs/DATA_AND_MEMORY_MODEL.md
+  - docs/AUTONOMY_AND_APPROVALS.md
+  - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+  - docs/decisions/0004-relational-state-and-audit.md
+  - docs/decisions/0005-persistence-path.md
+  - docs/decisions/0011-bounded-quality-gauntlet.md
+criteria:
+  - id: CAP-001
+    class: capability
+    description: >-
+      A clean PostgreSQL database is created from zero, every immutable Alembic
+      migration applies in order, and deterministic fixtures load idempotently.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run verify:postgresql
+    expected: >-
+      A real PostgreSQL instance reaches Alembic head from an empty database and two
+      fixture loads retain the exact deterministic synthetic dataset.
+    risk_tags:
+      - architecture
+  - id: CAP-002
+    class: capability
+    description: >-
+      PostgreSQL transaction tests prove atomic commit and rollback for state, audit,
+      receipts, approvals, schedule blocks, and queued events.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run test:postgresql
+    expected: Failed transactions leave none of their state, audit, receipt, approval, block, or outbox writes committed.
+    risk_tags:
+      - architecture
+      - side-effects
+  - id: CAP-003
+    class: capability
+    description: >-
+      PostgreSQL concurrency tests demonstrate optimistic compare-and-swap behavior,
+      applicable row locking, conflict translation, and exactly one winner for races.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run test:postgresql
+    expected: Concurrent conflicting mutations return controlled outcomes and preserve database invariants without duplicate authoritative writes.
+    risk_tags:
+      - architecture
+  - id: CAP-004
+    class: capability
+    description: >-
+      Duplicate commands and event deliveries are tolerated through durable idempotency
+      receipts and consumer claims, including changed-payload conflict behavior.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run test:postgresql
+    expected: Exact retries replay one result, mutated key reuse conflicts, and duplicate event delivery produces one handler effect.
+    risk_tags:
+      - architecture
+      - side-effects
+  - id: CAP-005
+    class: capability
+    description: >-
+      Authorization, household isolation, provenance, immutable audit, approval binding,
+      and denial auditing remain enforced when PostgreSQL is the persistence backend.
+    mandatory: true
+    severity_on_fail: P0
+    evaluator: authorization
+    command: npm run test:postgresql
+    expected: PostgreSQL-backed positive and negative tests pass with no cross-person access, provenance loss, mutable audit, or reusable/stale approval.
+    risk_tags:
+      - security
+      - permissions
+      - data-access
+  - id: CAP-006
+    class: capability
+    description: >-
+      Authoritative mutations enqueue canonical events in a transactional outbox in the
+      same database transaction, and rollback prevents delivery eligibility.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run test:execution
+    expected: Committed mutations expose one durable event and rolled-back mutations expose none.
+    risk_tags:
+      - architecture
+      - side-effects
+  - id: CAP-007
+    class: capability
+    description: >-
+      Outbox delivery uses bounded safe retries, lease-based concurrency protection,
+      visible failed state, and explicit operator recovery without reporting failure as success.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run test:execution
+    expected: Retryable failures back off to a declared limit, terminal failures remain queryable, and recovery is explicit and audited.
+    risk_tags:
+      - architecture
+      - agent-autonomy
+      - side-effects
+  - id: CAP-008
+    class: capability
+    description: >-
+      A stopped worker can restart, reclaim expired work safely, and complete delivery
+      without losing or duplicating the handler effect.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run test:execution
+    expected: A deterministic crash/restart scenario preserves the event and yields one eventual effect with observable attempt history.
+    risk_tags:
+      - architecture
+      - agent-autonomy
+      - side-effects
+  - id: CAP-009
+    class: capability
+    description: >-
+      Dialect-sensitive schema, timestamp, locking, constraint, isolation, and error
+      behavior is either PostgreSQL-tested or explicitly isolated from the SQLite path.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: static_analysis
+    command: npm run test:dialect-boundaries
+    expected: Dialect-boundary checks and focused tests find no accidental SQLite definition of production semantics.
+    risk_tags:
+      - architecture
+  - id: CAP-010
+    class: capability
+    description: >-
+      CI provisions a real PostgreSQL service and runs the clean bootstrap, migrations,
+      fixtures, persistence, concurrency, authorization, and execution suites.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run validate:postgresql-ci
+    expected: The reproducible CI job invokes the same PostgreSQL verification command and has an actual successful run result.
+    risk_tags:
+      - architecture
+  - id: REG-001
+    class: regression
+    description: The complete accepted Foundation v0.1 verification surface remains green.
+    mandatory: true
+    severity_on_fail: P0
+    evaluator: deterministic
+    command: npm run verify
+    expected: Lint, strict types, unit and SQLite integration tests, frontend build, quality, continuity, and demo all exit 0.
+  - id: REG-002
+    class: regression
+    description: Both accepted mock/synthetic demonstration flows remain deterministic and no capability becomes live.
+    mandatory: true
+    severity_on_fail: P0
+    evaluator: deterministic
+    command: npm run demo:verify
+    expected: Scheduling, ambiguity, and finance demonstrations pass with an empty live-capability list.
+  - id: REG-003
+    class: regression
+    description: SQLite remains an explicit lightweight local/test option without being used as PostgreSQL acceptance evidence.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: integration
+    command: npm run test:integration
+    expected: The local SQLite integration suite passes independently and is clearly separated from PostgreSQL verification.
+  - id: REG-004
+    class: regression
+    description: Existing architecture, provider, permission, provenance, approval, audit, idempotency, and XSS guards remain green.
+    mandatory: true
+    severity_on_fail: P0
+    evaluator: deterministic
+    command: npm run test:unit
+    expected: The accepted Foundation unit and frontend regression suite exits 0.
+  - id: REG-005
+    class: regression
+    description: Manifest discovery, accepted ADRs, evidence, status, checklist, risks, and exact handoff remain mutually consistent.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: deterministic
+    command: npm run validate:continuity
+    expected: Continuity validation exits 0 after v0.2 records are reconciled.
+  - id: REV-001
+    class: review
+    description: An author-independent persistence architecture reviewer accepts PostgreSQL boundaries, migrations, and outbox design.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: ACCEPT with no P0/P1 architecture finding.
+    risk_tags:
+      - architecture
+  - id: REV-002
+    class: review
+    description: An author-independent concurrency and reliability reviewer accepts races, retries, duplicate tolerance, and recovery evidence.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: ACCEPT with no P0/P1 concurrency or reliability finding.
+    risk_tags:
+      - architecture
+      - agent-autonomy
+      - side-effects
+  - id: REV-003
+    class: review
+    description: An author-independent security and authorization reviewer accepts isolation, provenance, audit, approval, and worker policy controls.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: ACCEPT with no P0/P1 security or authorization finding.
+    risk_tags:
+      - security
+      - permissions
+      - data-access
+  - id: REV-004
+    class: review
+    description: An author-independent final milestone reviewer validates executed evidence and every success-contract requirement.
+    mandatory: true
+    severity_on_fail: P1
+    evaluator: independent_review
+    command: null
+    expected: ACCEPT with no P0/P1 unsupported completion claim.
+required_reviewers:
+  - role: persistence-architecture
+    independent: true
+  - role: concurrency-reliability
+    independent: true
+  - role: security-authorization
+    independent: true
+  - role: milestone-acceptance
+    independent: true
+stop_conditions:
+  success:
+    - every mandatory capability criterion passes against its declared environment
+    - every Foundation v0.1 regression criterion passes
+    - no unresolved P0 or P1 failure remains
+    - every required author-independent reviewer accepts
+    - CI has an actual successful real-PostgreSQL execution result
+    - final evidence and continuity records are reconciled
+  escalate:
+    - the same material failure survives 3 focused repairs
+    - 2 consecutive iterations produce no measurable improvement
+    - requirements conflict or success cannot be measured reliably
+    - real PostgreSQL or CI execution remains unavailable after the strongest reproducible path is configured
+    - a required external dependency, credential, authority, or user decision blocks progress
+    - a repair would violate accepted architecture, security, capability, or Foundation v0.1 invariants
+    - the iteration budget is exhausted without satisfying success conditions

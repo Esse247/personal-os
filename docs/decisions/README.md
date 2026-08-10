@@ -13,3 +13,5 @@ Accepted ADRs are authoritative for durable technical choices. Supersede an ADR 
 - [0009 — Deterministic scheduling and finance](0009-deterministic-decision-components.md)
 - [0010 — Local development identity](0010-local-development-identity.md)
 - [0011 — Bounded evidence-driven quality gauntlet](0011-bounded-quality-gauntlet.md)
+- [0012 — PostgreSQL production semantics and transactional outbox execution](0012-postgresql-outbox-execution.md)
+- [0013 - Canonical internal events and fenced execution authority](0013-canonical-events-and-fenced-execution.md)

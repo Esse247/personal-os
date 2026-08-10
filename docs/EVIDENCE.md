@@ -83,3 +83,168 @@ The append-only reviewer/run text above records `4030` UTF-8 bytes for `AGENTS.m
 ### Independent final evidence acceptance
 
 The read-only evidence reviewer accepted the reconciled run after the metric correction. Its independent results were: derived quality PASS exit 0; continuity exit 0; all five skills valid; 36 focused tests pass; full verification exit 0 with 57 backend unit, one frontend, and 19 integration tests; exact capability parity with no live capability; and the unchanged PostgreSQL-first CI handoff. No P0/P1 unsupported claim remained. The two residual P2 limitations—attestational command/reviewer identity and unexecuted Docker/PostgreSQL runtime—remain explicit.
+
+## 2026-08-10 — Persistence & Execution Foundation v0.2 baseline
+
+Checkpoint recorded at `2026-08-10T20:20:00Z` for quality run
+`qg-20260810-persistence-execution-v02-run-001`. The accepted Foundation v0.1 tag remains
+the regression baseline; this checkpoint does not claim v0.2 implementation or acceptance.
+
+| Command or observation | Exit/result | Material evidence |
+|---|---:|---|
+| Fixed pre-implementation success contract | valid | Contract `qg-20260810-persistence-execution-v02` distinguishes capability and regression evals, requires four independent specialist roles, limits repairs to three, and has canonical SHA-256 `f389abd334a7746c491c5fb618c535ac9c624edea2cf8bfb73cf9caac1a5aa66`. |
+| `npm.cmd run validate:quality -- --artifacts-only` | 0 | Two contracts and the pre-existing completed run validated before iteration-zero execution. |
+| `npm.cmd run verify` | 0 | In 39.9 seconds, lint, strict types, 57 backend unit tests, one frontend test, 19 SQLite integration tests, production build, quality, continuity, and both local mock/synthetic demo flows passed; `live_capabilities` was empty. |
+| PostgreSQL tooling and CI inventory | observed unavailable | Docker, `psql`, and `pg_isready` are unavailable; `.github/workflows` did not exist. This is a real-execution blocker, not a pass. |
+| `npm.cmd run verify:postgresql` | 1 | Missing script at baseline; no PostgreSQL acceptance path existed. |
+| `npm.cmd run test:execution` | 1 | Missing script at baseline; no outbox/retry/lease/recovery implementation existed. |
+| `npm.cmd run validate:quality -- --artifacts-only` after active run creation | 0 | Two contracts and two runs validate; baseline severity vector is `[0, 2, 0, 0]` for the PostgreSQL and durable-delivery P1 gaps. |
+| Phase-advance quality-validator repair iteration 1 | retained | Manifest advancement exposed a P1 historical-checklist binding defect. The validator now requires the active checklist only for the manifest-selected current run and preserves finalized historical references. |
+| `node scripts/python.mjs -m pytest backend/tests/unit/test_quality_validator.py -q` | 0 | 31 focused tests passed, including the new finalized-run phase-advance regression. |
+| Focused Ruff and mypy checks | 0 | `scripts/validate_quality.py` and its focused test file passed lint, format, and strict typing. |
+| `npm.cmd run validate:quality -- --artifacts-only` and `npm.cmd run validate:continuity` | 0 | Two contracts/two runs validate and manifest, active checklist, sources, handoff, evidence, ADRs, and links agree. |
+
+## 2026-08-10 — Persistence & Execution Foundation v0.2 escalated checkpoint
+
+Checkpoint completed at `2026-08-10T21:26:06Z` for quality run
+`qg-20260810-persistence-execution-v02-run-001`. The run exhausted its fixed three-repair
+budget and ended `COMPLETE / ESCALATE`; this is not v0.2 acceptance and does not alter the
+accepted Foundation v0.1 baseline.
+
+| Command or review | Exit/result | Material evidence |
+|---|---:|---|
+| `npm.cmd run verify` after the execution substrate and lease repair | 0 | In 40.4 seconds, repository safety, Ruff/ESLint, strict Python/TypeScript, 73 backend unit tests, one frontend test, 28 SQLite integration tests, production build, structural PostgreSQL CI, quality, continuity, and both mock/synthetic demo flows passed. `live_capabilities` remained empty. |
+| `npm.cmd run test:execution` | 0 | Nine local integration scenarios passed: atomic enqueue/rollback, atomic effect/receipt/audit/delivery, duplicate suppression, bounded retry and visible failure, two-stage policy recheck, crash/reclaim, stale fencing rollback, unknown/external-handler denial, and owner-scoped HTTP recovery visibility. |
+| `npm.cmd run test:dialect-boundaries` | 0 | Six tests passed. Static compilation/review confirms PostgreSQL delivery and failure predicates compare the lease directly with `clock_timestamp()` and return the database-written transition timestamp. |
+| PostgreSQL suite collection | 0 | Twelve tests collected, including fresh migration/fixtures, immutable audit, rollback, CAS, partial overlap, skip-locked claim, stale fencing, two deterministic wall-clock-expiry variants, retry/recovery, and API invariants. Collection is not execution evidence. |
+| `npm.cmd run verify:postgresql` | 1 | Refused to run because `PERSONAL_OS_POSTGRES_TEST_URL` is absent. Docker, `psql`, `pg_isready`, all three verifier URLs, and a Git remote/actual CI run are unavailable. |
+| `npm.cmd run test:postgresql` | 1 | Exited with `real PostgreSQL URL is required; SQLite substitution is prohibited`. No PostgreSQL test is claimed as passed. |
+| `npm.cmd run validate:postgresql-ci` | 0 | The pinned PostgreSQL 17 workflow, synthetic local URLs, exact verifier command, and regression command are structurally valid. This is not an actual CI result. |
+| `npm.cmd run validate:safety` | 0 | A deterministic read-only scan passed all 167 Git candidate files; it rejects environment/credential files, private keys/tokens, local databases, dependencies, caches, builds, logs, IDE state, and other runtime artifacts. Four focused adversarial unit tests passed. |
+| `npm.cmd run audit:dependencies` | 0 | With registry access permitted, `pip-audit` and `npm audit` reported no known third-party vulnerability. The editable local `personal-os` package was explicitly skipped because it is not a PyPI package. |
+| Independent persistence-architecture review and lease re-review | reject completion | The `clock_timestamp()` fencing P1 is resolved with no new P0/P1. Review still rejects because the populated revision-0005 verifier calls a current-head-only CLI, execution reads bypass central policy, and recovery lacks a typed correlated idempotent receipt. |
+| Independent concurrency/reliability review and re-review | reject completion | Direct wall-clock fenced updates and the deterministic transaction-before-expiry test shape are accepted. The role rejects solely because real PostgreSQL concurrency semantics were not executed. |
+| Independent security/authorization review | reject completion | Local fail-closed, redaction, owner filtering, worker reauthorization, and dependency/credential controls pass. The role rejects execution read/recovery authority gaps and missing PostgreSQL security evidence. |
+| Independent milestone evidence review | reject completion; accept escalation record | Foundation v0.1 remains green, no capability became live, and the evidence supports freezing this run only as `COMPLETE / ESCALATE`. It identifies no P0, three unresolved P1s, and one execution-contract P2 family. |
+| `npm.cmd run validate:quality -- --artifacts-only` after final run record | 0 | Both immutable contracts and both run histories validate; iteration vectors derive from stable failure lifecycles and every reviewer is author-independent. |
+
+The unresolved P1s are exact and active: no real PostgreSQL/CI execution; a structurally
+self-defeating populated historical verifier; and incomplete central-policy/idempotent
+command controls on execution operator reads/recovery. P2 hardening remains for the
+preauthorization claim label and handler-effect envelope binding. Foundation v0.1 remains
+independently accepted at `foundation-v0.1-accepted` for localhost/mock/synthetic use.
+
+### Final reconciliation
+
+| Command | Exit | Material result |
+|---|---:|---|
+| Final reconciled `npm.cmd run verify` | 0 | In 35.1 seconds, the finalized escalation run and continuity records passed repository safety, lint, strict types, 73 backend unit tests, one frontend test, 28 integration tests, production build, structural PostgreSQL CI, quality, continuity, and deterministic mock/synthetic demo verification. |
+| `npm.cmd run validate:quality -- --require-pass qg-20260810-persistence-execution-v02-run-001` | expected 1 | The derived gate rejected every non-passing PostgreSQL/operator/reviewer criterion, all three P1 risks and failures, and the `ESCALATE` disposition. This proves structural validity did not become milestone acceptance. |
+
+## 2026-08-10 — Persistence & Execution v0.2 successor escalation
+
+Checkpoint completed at `2026-08-10T22:20:38Z` for quality run
+`qg-20260810-persistence-execution-v02-run-002`. The run preserves the fixed Success
+Contract and predecessor lineage. It is `COMPLETE / ESCALATE`, not v0.2 acceptance; the
+independently accepted Foundation v0.1 tag remains the capability baseline.
+
+| Command, probe, or review | Exit/result | Material evidence |
+|---|---:|---|
+| Successor iterations 1 and 2 | retained | The revision-pinned historical seeder removed the stale-schema/current-CLI conflict. Owner-scoped execution reads and typed recovery gained central policy, correlation, digest, durable result receipt, exact replay, changed-content conflict/denial audit, and PostgreSQL idempotency serialization. |
+| PostgreSQL runtime identity and containment | 0 | PostgreSQL `17.10` ran as synthetic user `personal_os` on loopback `127.0.0.1:55432` with UTC timezone. Runtime, data, logs, installer, and synthetic password file are under ignored `work/`. No system service, remote, or live credential was configured. |
+| EDB PostgreSQL 17.10 extract-only installer SHA-256 | match | `C0728FACCC95CED5A280EFDC32413FE35764B2302670EEC72569B0FD41AC3513` matched the pinned package checksum before extraction. |
+| `npm.cmd run verify:postgresql` with three local synthetic URLs | 0 | In 15.5 seconds, the verifier created disposable databases, preserved representative accepted-v0.1 state through `0005_calendar_snapshot_binding -> 0008_operator_receipts`, applied a clean zero-to-head path and second no-op, loaded fixtures twice, and passed all 13 PostgreSQL tests. Result JSON recorded `historical_upgrade=passed`, `migration_passes=2`, and `fixtures_loads=2`. |
+| Real PostgreSQL repair evidence | resolved | Execution exposed two production-semantic defects hidden by SQLite: v0.2 Alembic revision IDs exceeded the accepted 32-character version column, and a dependent consumer receipt could flush before its internal effect. Only unaccepted v0.2 revision IDs were shortened; accepted 0001-0005 stayed unchanged. Effect flush ordering now satisfies the foreign key while remaining in the same fenced transaction. |
+| Focused PostgreSQL fencing/race rerun | 0 | Four previously failing SKIP LOCKED, stale-fence, and wall-clock-expiry cases passed after the atomic effect/receipt ordering repair. |
+| Root `npm.cmd run verify` | 0 | In 74.9 seconds, repository safety, Ruff/ESLint, strict Python/TypeScript, 76 backend unit tests, one frontend test, 28 SQLite integration tests, production build, PostgreSQL-CI contract, quality and continuity structure, and both local mock/synthetic demos passed. `live_capabilities` remained empty. |
+| `npm.cmd run audit:dependencies` with registry access | 0 | Pip-audit and npm audit reported no known third-party vulnerability. The editable local `personal-os` project was explicitly skipped because it is not a PyPI package. |
+| Independent persistence architecture review (`faraday-persistence-architecture-run002-20260810`) | ACCEPT | Unique databases passed populated/clean migrations, repeat fixtures, 13 PostgreSQL tests, execution, dialect, unit, and aggregate gates. No P0/P1 architecture finding remained. |
+| Independent concurrency/reliability review (`lamport-concurrency-r002-7f3c`) | ACCEPT | Unique PostgreSQL execution plus adversarial recovery/backoff probes accepted CAS, races, retry, duplicate tolerance, fencing, crash/restart, visibility, and recovery durability. It confirmed two P2 binding findings. |
+| Independent security/authorization review (`security-authorization-r2-20260810-2309`) | REJECT | Unique PostgreSQL/security regressions passed, but an allow-then-deny probe recorded only one policy decision across initial recovery and exact replay. The replay returned the same stored result before current central reauthorization, a P1. |
+| Independent milestone review (`anscombe-milestone-r002-20260810-2219`) | REJECT / ESCALATE | CAP-001-004, 006, 008-009 and REG-001-004 pass; CAP-005/007 fail on replay authorization and CAP-010 fails because no actual hosted CI run exists. No P0 exists. Foundation v0.1 remains green and no capability became live. |
+| Shared-name parallel reviewer attempts | excluded | Parallel disposable verifiers briefly collided by recreating the same database names. Those results were discarded; each valid independent rerun used unique database names. |
+
+Two P1s remain: `recovery-exact-replay-skips-central-policy` and
+`actual-postgresql-ci-run-unavailable`. Two P2s remain: the preauthorization claim label
+and independent handler-effect envelope binding. The fixed three-repair budget is
+exhausted, so this run stops and escalates instead of hiding another repair in iteration 3
+or broadening into future specialists/live integrations.
+
+### Successor final reconciliation
+
+| Command | Exit | Material result |
+|---|---:|---|
+| `npm.cmd run validate:quality -- --artifacts-only` | 0 | The fixed contracts and all three run histories validate; run 002 lifecycle vectors, stable failures, independent reviewers, final checks, and continuity references derive consistently. |
+| `npm.cmd run validate:continuity` | 0 | Manifest sources, active checklist, accepted ADRs, build status, evidence, risks, and exact handoff reconcile. |
+| `npm.cmd run validate:quality -- --require-pass qg-20260810-persistence-execution-v02-run-002` | expected 1 | The derived gate rejects the ESCALATE disposition, CAP-005/007/010, REV-003/004, both P1 failures/risks, and both rejecting reviewer roles. Structural validity does not become v0.2 acceptance. |
+| Reconciled `npm.cmd run verify` | 0 | In 40.2 seconds, the final successor run and continuity records passed repository safety, lint, strict types, 76 backend unit tests, one frontend test, 28 integration tests, production build, structural PostgreSQL CI, quality, continuity, and both deterministic mock/synthetic demos; `live_capabilities` remained empty. |
+| Final exact-tree `npm.cmd run verify` | 0 | In 33.8 seconds, the same complete surface passed after the reconciled verification row was appended; quality and continuity remained valid and `live_capabilities` remained empty. |
+
+## 2026-08-10 — Persistence & Execution v0.2 successor run 003 baseline
+
+Persistent-goal continuation authorized another bounded successor without changing the
+fixed contract, accepted Foundation baseline, v0.2 scope, capability truth, or prior
+append-only run histories. Run `qg-20260810-persistence-execution-v02-run-003` links run
+002 and carries the two unresolved P1 and two unresolved P2 stable failure keys.
+
+| Command or record | Exit/result | Material evidence |
+|---|---:|---|
+| Run-003 artifact creation and manifest selection | recorded | Contract SHA-256 remains `f389abd334a7746c491c5fb618c535ac9c624edea2cf8bfb73cf9caac1a5aa66`; baseline vector derives as `[0, 2, 2, 0]`; first repair is `recovery-exact-replay-skips-central-policy`. |
+| `npm.cmd run validate:quality -- --artifacts-only` | 0 | Two contracts and four run histories validate with exact successor lineage and stable failure carry-forward. |
+| `npm.cmd run validate:continuity` | 0 | Manifest, active run/checklist, sources, handoff, evidence, ADRs, and links agree. |
+| Fresh run-003 baseline `npm.cmd run verify` | 0 | In 34.7 seconds, repository safety, lint, strict types, 76 backend unit tests, one frontend test, 28 integration tests, production build, structural validators, continuity, and both deterministic mock/synthetic demos passed; `live_capabilities` remained empty. |
+
+## 2026-08-10 — Run-003 recovery replay reauthorization repair
+
+Retained iteration 1 resolves `recovery-exact-replay-skips-central-policy` without changing
+the fixed contract, accepted Foundation baseline, provider/capability mode, or v0.2 scope.
+The quality vector improves from `[0, 2, 2, 0]` to `[0, 1, 2, 0]`; actual hosted CI is
+the sole remaining P1.
+
+| Command, probe, or review | Exit/result | Material evidence |
+|---|---:|---|
+| `npm.cmd run test:execution` | 0 | Ten scenarios pass, including allow-then-revoke exact recovery replay. The revoked replay discloses no stored result, leaves one receipt and one recovered transition, and appends a correlated denial audit. |
+| Backend lint and mypy | 0 | Ruff reports 62 files formatted and clean; mypy reports no issues in 61 source files. |
+| `npm.cmd run verify:postgresql` | 0 | In 18.6 seconds, PostgreSQL 17.10 passed clean zero-to-0008, populated 0005-to-0008 preservation, repeat migration, two fixture loads, and all 14 PostgreSQL tests. |
+| Root `npm.cmd run verify` | 0 | In 35.5 seconds, repository safety, lint, strict types, 76 backend unit tests, one frontend test, 29 SQLite integration tests, build, quality/continuity/CI-contract validators, and both mock/synthetic demos passed; `live_capabilities` remained empty. |
+| Independent security recheck (`security-authorization-r3-recheck-20260810-2340`) | ACCEPT | An independent allow-once-then-revoke probe made two policy decisions, denied exact replay without result disclosure, retained exactly one receipt and transition, and recorded the correlated denial audit. Reviewer-isolated clean/populated PostgreSQL paths and 14 tests passed. P0/P1 security findings: none in the repaired scope. |
+| `git remote -v` and hosted-run inspection | unavailable | The repository has no configured remote and no actual hosted CI result. Structural workflow validation and successful local PostgreSQL execution are not substituted for CAP-010. No remote was configured and nothing was pushed. |
+| Run-003 iteration 2 hosted-CI attempt | no change | `npm.cmd run validate:postgresql-ci` passes only the structural workflow contract. Read-only inspection reports `Remotes=[]`, `GitHubCliAvailable=false`, and `LocalActionsRunnerAvailable=false`; the actual hosted-run P1 therefore requires external remote/CI authority and evidence. Vector remains `[0, 1, 3, 0]`. |
+| Independent persistence architecture review (`faraday-persistence-architecture-r003-20260810-2347`) | ACCEPT | Accepted migrations are unchanged; isolated clean/populated PostgreSQL verification and 14 tests pass; recovery authorization ordering preserves transaction boundaries. No P0/P1 architecture finding. |
+| Independent concurrency/reliability review (`concurrency-reliability-r3-20260810-2247`) | ACCEPT | Isolated 14-test PostgreSQL run plus concurrent exact/mutated replay probes produced one receipt/transition, controlled denial/conflict, correlated audits, and no deadlock/timeout. It adds P2 `recovery-advisory-lock-unbounded-wait`; the current lock graph has no cycle. |
+
+## 2026-08-10 — Run-003 external-authority escalation
+
+Quality run `qg-20260810-persistence-execution-v02-run-003` completed at
+`2026-08-10T22:54:19Z` with disposition `ESCALATE`, not PASS. It resolved the actionable
+recovery-authorization P1, preserved the fixed contract and accepted Foundation baseline,
+and stopped when the remaining mandatory gate required a remote/hosted execution result
+outside current authority. No remote was configured and nothing was pushed.
+
+| Command, check, or review | Exit/result | Material evidence |
+|---|---:|---|
+| Final criteria CAP-001–009 and REG-001–005 | PASS | Local and reviewer-isolated PostgreSQL, execution, dialect, complete regression, demo, quality, and continuity evidence pass. |
+| CAP-010 | FAIL | The PostgreSQL workflow contract is valid, but no actual hosted execution result exists; the repository has no remote. |
+| REV-001 `faraday-persistence-architecture-r003-20260810-2347` | ACCEPT | No P0/P1 architecture finding; accepted migrations and boundaries remain intact. |
+| REV-002 `concurrency-reliability-r3-20260810-2247` | ACCEPT | No P0/P1 concurrency/reliability finding; one scoped-lock-timeout P2 recorded. |
+| REV-003 `security-authorization-r3-recheck-20260810-2340` | ACCEPT | No P0/P1 security finding after exact replay reauthorization repair. |
+| REV-004 `anscombe-milestone-r003-20260810-2253` | REJECT / ESCALATE | CAP-010 is the sole P1. CAP-001–009, REG-001–005, and REV-001–003 pass; no capability is live. |
+| Frozen-run `npm.cmd run verify` | 0 | In 39.3 seconds, the completed run and reconciled records passed repository safety over 170 candidates, lint, strict types, 76 backend unit tests, one frontend test, 29 integration tests, production build, structural PostgreSQL-CI/quality/continuity validation, and both mock/synthetic demos; `live_capabilities` remained empty. |
+| `npm.cmd run validate:quality -- --require-pass qg-20260810-persistence-execution-v02-run-003` | expected 1 | The derived gate rejects only the non-PASS disposition, CAP-010, REV-004, remaining P1 risk/failure, and rejecting milestone reviewer. It does not relabel structural/local evidence as hosted CI. |
+
+## 2026-08-11 — Run-004 authorized hosted-CI continuation
+
+The user supplied `https://github.com/Esse247/personal-os.git` and explicitly authorized
+origin configuration, committing the current v0.2 work, pushing the accepted v0.1
+baseline/tag and v0.2 branch, and running GitHub Actions. Run
+`qg-20260810-persistence-execution-v02-run-004` opens with exact run-003 lineage and vector
+`[0, 1, 3, 0]`; no hosted result is claimed yet.
+
+| Command or check | Exit/result | Material evidence |
+|---|---:|---|
+| `git ls-remote https://github.com/Esse247/personal-os.git` | 0 | The authorized destination exists and returns no refs, consistent with an empty repository. |
+| Git identity inspection | configured | Commit author is configured as `Esse247 <essayye99@gmail.com>`; no identity was invented. |
+| `npm.cmd run validate:safety` | 0 | Repository safety validation passed for all 170 current Git candidate files before staging. |
+| Ignore-boundary inspection | pass | `.env`, `.venv`, `node_modules`, frontend build output, PostgreSQL runtime/password state, backend test work, logs, and local databases resolve to explicit `.gitignore` rules. |
+| Run-004 pre-push `npm.cmd run verify` | 0 | In 34.0 seconds, safety over 171 candidates, lint, strict types, 76 backend unit tests, one frontend test, 29 integration tests, production build, structural CI/quality/continuity validation, and both mock/synthetic demos passed; `live_capabilities` remained empty. |
+| `npm.cmd run audit:dependencies` with advisory-service access | 0 | Pip-audit and npm audit found no known third-party vulnerabilities; the editable local `personal-os` project was explicitly skipped because it is not a PyPI package. |

@@ -1,9 +1,9 @@
 schema_version: 1
 project:
   name: PERSONAL OS
-  phase: foundation-v0.1
-  phase_label: Foundation v0.1
-  status: complete
+  phase: foundation-v0.2-persistence-execution
+  phase_label: Persistence & Execution Foundation v0.2
+  status: in_progress
   data_mode: synthetic_only
   integration_mode: mock_only
   default_bind_host: 127.0.0.1
@@ -54,7 +54,8 @@ decisions:
   index: docs/decisions/README.md
 
 checklists:
-  active: checklists/FOUNDATION_V0_1.md
+  active: checklists/PERSISTENCE_EXECUTION_V0_2.md
+  foundation_baseline: checklists/FOUNDATION_V0_1.md
   security: checklists/SECURITY_REVIEW.md
   integration: checklists/INTEGRATION_READINESS.md
   release: checklists/RELEASE_READINESS.md
@@ -69,6 +70,8 @@ repo_skills:
 quality:
   protocol: quality/README.md
   agents_policy: quality/agents-policy.yaml
+  current_contract: quality/contracts/qg-20260810-persistence-execution-v02.yaml
+  current_run: quality/runs/qg-20260810-persistence-execution-v02-run-004.yaml
   contracts: quality/contracts
   runs: quality/runs
   rubrics: quality/rubrics
@@ -92,12 +95,20 @@ verification:
   typecheck: npm run typecheck
   unit_tests: npm run test:unit
   integration_tests: npm run test:integration
+  execution_tests: npm run test:execution
+  execution_once: npm run execution:once
+  execution_failed: npm run execution:failed
+  postgresql_tests: npm run test:postgresql
+  postgresql_verify: npm run verify:postgresql
+  dialect_boundaries: npm run test:dialect-boundaries
+  postgresql_ci_contract: npm run validate:postgresql-ci
   all_tests: npm test
   local_demo: npm run demo:verify
   migrate: npm run db:migrate
   fixtures: npm run fixtures:load
   continuity: npm run validate:continuity
   quality: npm run validate:quality
+  repository_safety: npm run validate:safety
   full: npm run verify
   dependency_audit: npm run audit:dependencies
 

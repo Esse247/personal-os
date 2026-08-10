@@ -1,0 +1,46 @@
+name: PostgreSQL production semantics
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  postgresql-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PERSONAL_OS_POSTGRES_ADMIN_URL: postgresql+psycopg://personal_os:personal_os_local_only@127.0.0.1:5432/postgres
+      PERSONAL_OS_POSTGRES_TEST_URL: postgresql+psycopg://personal_os:personal_os_local_only@127.0.0.1:5432/personal_os_verify
+      PERSONAL_OS_POSTGRES_UPGRADE_URL: postgresql+psycopg://personal_os:personal_os_local_only@127.0.0.1:5432/personal_os_upgrade_verify
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: personal_os
+          POSTGRES_PASSWORD: personal_os_local_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U personal_os -d postgres"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m venv .venv
+      - run: .venv/bin/python -m pip install --upgrade pip
+      - run: .venv/bin/python -m pip install -e 'backend[dev]'
+      - run: npm ci
+      - run: npm run validate:postgresql-ci
+      - run: npm run verify:postgresql
+      - run: npm run verify

@@ -12,6 +12,18 @@ OTHER_USER_ID = "user-riley-synthetic"
 DEMO_HOUSEHOLD_ID = "household-lantern-synthetic"
 
 
+def _environment_boolean(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().casefold()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ProhibitedCapabilityError(f"{name} must be an explicit boolean")
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     environment: str = "development"
@@ -32,6 +44,7 @@ class Settings:
             ),
             bind_host=os.getenv("PERSONAL_OS_BIND_HOST", "127.0.0.1"),
             bind_port=int(os.getenv("PERSONAL_OS_BIND_PORT", "8000")),
+            auto_initialize=_environment_boolean("PERSONAL_OS_AUTO_INITIALIZE", True),
         )
 
     def validate_foundation_mode(self) -> None:
@@ -81,4 +94,8 @@ class Settings:
         }:
             raise ProhibitedCapabilityError(
                 "Foundation PostgreSQL accepts only the documented synthetic local account"
+            )
+        if self.auto_initialize:
+            raise ProhibitedCapabilityError(
+                "PostgreSQL requires explicit Alembic bootstrap and auto-initialize=false"
             )

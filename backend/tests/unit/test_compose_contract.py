@@ -17,6 +17,7 @@ def test_compose_defines_local_postgres_api_and_dashboard_without_live_mode() ->
     assert services["backend"]["ports"] == ["127.0.0.1:8000:8000"]
     assert services["frontend"]["ports"] == ["127.0.0.1:4173:8080"]
     assert services["backend"]["environment"]["PERSONAL_OS_PROVIDER_MODE"] == "mock"
+    assert services["backend"]["environment"]["PERSONAL_OS_AUTO_INITIALIZE"] == "false"
     assert "postgresql+psycopg" in services["backend"]["environment"]["PERSONAL_OS_DATABASE_URL"]
 
 

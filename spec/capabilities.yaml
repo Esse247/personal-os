@@ -6,6 +6,8 @@ status_vocabulary:
   - live
   - prohibited
 phase: foundation-v0.1
+accepted_capability_baseline: foundation-v0.1
+engineering_phase: foundation-v0.2-persistence-execution
 assertions:
   contains_real_credentials: false
   contains_personal_data: false

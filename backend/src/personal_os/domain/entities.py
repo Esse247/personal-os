@@ -418,6 +418,8 @@ class CommandReceipt:
     commitment_id: str | None = None
     proposal_id: str | None = None
     replacement_proposal_id: str | None = None
+    outbox_event_id: str | None = None
+    result_json: str | None = None
 
     def __post_init__(self) -> None:
         require_aware(self.created_at, "created_at")
@@ -429,6 +431,17 @@ class CommandReceipt:
         ):
             if not value.strip():
                 raise ValidationError("command receipt fields cannot be empty")
+        if (self.outbox_event_id is None) != (self.result_json is None):
+            raise ValidationError(
+                "command receipt outbox event and result snapshot must be stored together"
+            )
+        if self.outbox_event_id is not None and not self.outbox_event_id.strip():
+            raise ValidationError("command receipt outbox event ID cannot be empty")
+        if self.result_json is not None:
+            if not self.result_json.strip():
+                raise ValidationError("command receipt result snapshot cannot be empty")
+            if len(self.result_json.encode("utf-8")) > 2048:
+                raise ValidationError("command receipt result snapshot exceeds 2048 bytes")
 
 
 @dataclass(frozen=True, slots=True)
