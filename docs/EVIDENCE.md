@@ -337,3 +337,20 @@ runs 002 through 004 remain immutable `ESCALATE` history.
 | `npm.cmd run validate:continuity` after reconciliation | 0 | Manifest status, completed run, build status, evidence, checklist, risks, handoff, ADRs, and links reconcile. |
 | `npm.cmd run validate:quality -- --require-pass qg-20260810-persistence-execution-v02-run-005` | 0 | The validator derives acceptance from the fixed contract, mandatory final checks, resolved failure lifecycle, four independent ACCEPT decisions, zero remaining risks, and reconciled continuity; it reports `Quality acceptance passed`. |
 | Final reconciled `npm.cmd run verify` | 0 | Safety over 172 candidates, lint/format, strict types, 76 backend unit tests, one frontend test, 38 integration tests, production build, PostgreSQL CI contract, quality/continuity validators, and mock/synthetic demos all pass; `live_capabilities` remains empty. |
+
+## 2026-08-11 - Persistent-goal completion audit
+
+Checkpoint recorded at `2026-08-11T00:40:09Z`. This is a requirement-by-requirement
+completion audit of the already accepted Persistence & Execution Foundation v0.2; it does
+not change product behavior, migrations, ADRs, provider/capability mode, or accepted scope.
+
+| Command, audit, or correction | Exit/result | Material evidence |
+|---|---:|---|
+| Original goal to fixed Success Contract/run reconciliation | pass | Every primary objective, required verification item, CI requirement, documentation record, and DONE condition maps to mandatory CAP-001 through CAP-010, REG-001 through REG-005, and REV-001 through REV-004. Run 005 records every criterion PASS, four independent ACCEPT decisions, no remaining risk, and final vector `[0, 0, 0, 0]`. |
+| Accepted-baseline immutability diff against `foundation-v0.1-accepted` | 0 / empty | Accepted migrations 0001 through 0005 and accepted ADRs 0001 through 0011 have no diff from tag `foundation-v0.1-accepted`; the v0.1 baseline remains unchanged. |
+| Open-question target-phase reconciliation | corrected | OQ-001 through OQ-004 now point to the recommended bounded pre-pilot Identity, Consent & Data Lifecycle goal; OQ-008 and OQ-009 point to future scheduling and UX/release hardening. Their conservative defaults are unchanged and no deferred question is mislabeled as accepted-v0.2 scope. |
+| `npm.cmd run validate:continuity` and `npm.cmd run validate:quality -- --artifacts-only` after the correction | 0 | Manifest discovery, accepted sources, handoff, evidence, ADRs, links, both contracts, and all six run histories remain structurally valid. |
+| Fresh `npm.cmd run verify:postgresql` | 0 | In 14.5 seconds, PostgreSQL 17 passed populated accepted-0005-to-0008 preservation, clean zero-to-0008, a second no-op migration, two deterministic fixture loads, and all 18 persistence/concurrency/authorization/provenance/audit/approval/idempotency/outbox/recovery tests. |
+| Fresh `npm.cmd run verify` | 0 | In 30.7 seconds, safety over 172 Git candidates, lint/format, strict types, 76 backend unit tests, one frontend test, 38 SQLite integration tests, production build, CI/quality/continuity validators, and both mock/synthetic demos passed; `live_capabilities` remained empty. |
+| `npm.cmd run validate:quality -- --require-pass qg-20260810-persistence-execution-v02-run-005` | 0 | The derived milestone gate reports `Quality acceptance passed`; it did not rely on a typed disposition alone. |
+| `npm.cmd run audit:dependencies` with advisory-service access | 0 | Pip-audit and npm audit found zero known third-party vulnerabilities. The editable local `personal-os` package was explicitly skipped because it is not published on PyPI. An initial sandboxed attempt was excluded because socket access was denied before an audit result existed. |
