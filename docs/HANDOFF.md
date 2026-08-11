@@ -4,18 +4,21 @@
 
 Foundation v0.1 remains independently accepted at tag `foundation-v0.1-accepted`.
 Persistence & Execution Foundation v0.2 remains active and unaccepted. Runs 002 through
-004 are frozen `COMPLETE / ESCALATE`. Active run-005 iteration 1 resolves the sole carried
-P2 locally and on PostgreSQL, producing vector `[0, 0, 0, 0]`. No P0/P1 or known unresolved
-failure remains, but final hosted and independent acceptance evidence is still pending. No
-capability is live.
+004 are frozen `COMPLETE / ESCALATE`. Run-005 iteration 1 resolved the carried P2, but
+exact candidate `5f789ea` was rejected when architecture review found P1
+`recovery-lock-timeout-scope-untranslated-55p03`. Retained iteration 2 now restores the
+prior PostgreSQL timeout and bounds both advisory-key and event-row locks. Its local and
+real-PostgreSQL vector is `[0, 0, 0, 0]`; replacement hosted and independent acceptance
+evidence is still pending. No capability is live.
 
 Real PostgreSQL 17.10 evidence now proves clean and populated migrations, deterministic
 fixtures, transactions, locking/races, audit immutability, bounded delivery, restart,
 fencing, duplicate tolerance, and recovery persistence. Run-003 iteration 1 now
 reauthorizes exact recovery replay before receipt read/result disclosure; independent
 security review accepts replay and handler-envelope repairs with no P0/P1 finding. Hosted
-CI proves pushed candidate `3ae6d6d`; the final repaired commit still needs a fresh hosted
-run before milestone acceptance.
+CI proves pushed candidates `3ae6d6d` and `5f789ea`, but the latter review finding required
+the current iteration-2 repair. The replacement exact commit still needs a fresh hosted run
+and all four fresh reviews before milestone acceptance.
 
 ## Exact next task
 

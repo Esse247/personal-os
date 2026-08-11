@@ -293,3 +293,26 @@ usable for current authorization and correlated audit.
 | Backend Ruff and mypy | 0 | Sixty-two files are formatted/clean and all 61 strict-typed source/test files pass. |
 | Current-tree `npm.cmd run verify` | 0 | In 30.7 seconds, safety over 172 candidates, lint, strict types, 76 backend unit tests, one frontend test, 38 integration tests, build, validators, continuity, and both mock/synthetic demos pass; `live_capabilities` is empty. |
 | Run-005 iteration 1 | retained | Quality vector improves from `[0, 0, 1, 0]` to `[0, 0, 0, 0]`; no known unresolved failure remains. Fresh exact-commit hosted CI and final independent reviews are still required. |
+
+## 2026-08-11 - Run-005 exact-candidate rejection and scoped-lock repair
+
+Candidate `5f789ea35d01c6786a999b23e820ca41d8810bbd` preserved the accepted
+Foundation baseline and passed hosted execution, but a post-hosting independent
+architecture probe found a new mandatory-CAP-007 P1. Run-005 therefore remained active;
+the hosted success was not treated as acceptance. Retained iteration 2 resolves stable
+failure key `recovery-lock-timeout-scope-untranslated-55p03` without changing migrations,
+provider/capability mode, authority, product behavior, or v0.2 scope.
+
+| Command, review, or record | Exit/result | Material evidence |
+|---|---:|---|
+| Candidate commit/push | success | Commit `5f789ea35d01c6786a999b23e820ca41d8810bbd` was pushed on `foundation-v0.2-persistence-execution`; accepted `main` and `foundation-v0.1-accepted` remained unchanged. |
+| [GitHub Actions run 31444166567](https://github.com/Esse247/personal-os/actions/runs/31444166567) | success | Hosted PostgreSQL 17, CI-contract validation, the strict PostgreSQL verifier, full regression, cleanup, and service stop all passed on exact SHA `5f789ea`. |
+| REV-001 `faraday-persistence-architecture-r005-20260811-0208-91e4` | REJECT | After a successful advisory lock, `SHOW lock_timeout` changed from `0` to `500ms`. A different-key recovery blocked on the same event row, raised raw SQLAlchemy `OperationalError` / SQLSTATE 55P03 after about 0.545 seconds, wrote no receipt or recovery transition, and wrote no correlated audit. |
+| Run-005 PE-F-012 discovery | recorded | The new finding is P1 `recovery-lock-timeout-scope-untranslated-55p03`, discovered for iteration 2 and tied to mandatory CAP-007 with architecture, agent-autonomy, and side-effect risk tags. |
+| Iteration-2 implementation | retained | One scoped PostgreSQL lock helper snapshots/restores the exact prior timeout around both advisory-key and event-row locks. SQLSTATE 55P03 rolls back only the savepoint, becomes `LockTimeoutError`, triggers fresh policy evaluation and correlated deferral/denial audit, leaves no receipt/transition/state mutation, and permits retry. |
+| `npm.cmd run verify:postgresql` | 0 | In 15.9 seconds, clean zero-to-0008, populated accepted-0005-to-0008, repeat migration, two fixture loads, and all 18 PostgreSQL tests passed. New tests prove successful-lock timeout restoration and different-key/same-row bounded contention, audit, zero partial writes, and retry. |
+| `npm.cmd run test:execution` | 0 | Nineteen local execution scenarios passed. |
+| `npm.cmd run test:dialect-boundaries` | 0 | Eight PostgreSQL/SQLite boundary checks passed. |
+| `npm.cmd run audit:dependencies` | 0 | Pip-audit and npm audit found zero known third-party vulnerabilities; the editable local `personal-os` package was explicitly skipped because it is not on PyPI. |
+| Current-tree `npm.cmd run verify` | 0 | In 33 seconds, repository safety over 172 candidates, lint, strict types, 76 backend unit tests, one frontend test, 38 integration tests, production build, CI/quality/continuity validators, and mock/synthetic demos passed; `live_capabilities` is empty. |
+| Run-005 iteration 2 | retained | Derived vector improves from `[0, 1, 0, 0]` to `[0, 0, 0, 0]`. Fresh hosted execution and all four independent roles are still required on the replacement exact commit; v0.2 remains unaccepted. |

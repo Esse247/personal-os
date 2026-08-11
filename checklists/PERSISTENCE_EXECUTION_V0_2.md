@@ -35,14 +35,17 @@ deferred with an explicit evidence-based rationale.
 - [x] Claim/reclaim history is labeled preauthorization; later delivered history remains allowed.
 - [x] Adversarial direct, mutable-input, and stateful-consumer handler outputs fail closed
   before effect or receipt persistence, with typed failed history and audit.
-- [x] Recovery advisory-lock acquisition has a 500 ms transaction-local timeout; real
-  PostgreSQL proves authorized audit/retry and wrong-actor non-disclosure with no partial write.
+- [x] Recovery advisory-key and event-row locks each have a non-leaking 500 ms scoped
+  timeout; real PostgreSQL proves prior-setting restoration, typed/audited contention,
+  zero partial write, authorized retry, and wrong-actor non-disclosure.
 
 ## CI and regressions
 
 - [x] A PostgreSQL 17 workflow invokes the same strict verifier and full regression command.
 - [x] GitHub Actions run 31441487067 provisions PostgreSQL 17 and passes the strict
   PostgreSQL verifier plus full regression on candidate commit `3ae6d6d`.
+- [x] GitHub Actions run 31444166567 passes on exact candidate `5f789ea`; its later
+  architecture rejection is retained and is not hidden by the hosted success.
 - [x] The complete Foundation v0.1 regression and both mock/synthetic demos remain green.
 - [x] SQLite remains a clearly labeled lightweight local/test path.
 - [x] Dependency, credential, build, regression, quality-structure, and continuity gates pass.
@@ -58,11 +61,12 @@ deferred with an explicit evidence-based rationale.
   P0/P1 finding and independently accept the handler-envelope repair.
 - [~] Run-004 milestone reviewer rejects and escalates solely because mandatory CAP-007
   retains the lock-timeout P2 after budget exhaustion; v0.2 is not accepted.
-- [x] No P0/P1 remains after actual hosted PostgreSQL CI success.
+- [~] Run-005 P1 `recovery-lock-timeout-scope-untranslated-55p03` is resolved by retained
+  iteration 2 locally and on real PostgreSQL; replacement exact-SHA review remains pending.
 - [x] GitHub destination and explicit commit/remote/push/Actions authority are recorded;
   hosted run 31441487067 is authentic and final repaired-tree hosting remains pending.
 - [x] Manifest, ADRs, architecture/security docs, risks, status, evidence, and handoff agree.
-- [~] Fresh hosted execution of the exact repaired commit and final run-005 independent
+- [~] Fresh hosted execution of the iteration-2 exact repaired commit and final run-005 independent
   acceptance/pass-gate evidence remain pending.
 
 ## Product North Star boundary

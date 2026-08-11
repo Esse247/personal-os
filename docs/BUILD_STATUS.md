@@ -41,7 +41,7 @@ provider mode, capability status, or authority level.
   under the synthetic `personal_os` user. All runtime/data/password/log files are under
   ignored `work/` and are not source-control candidates.
 - `npm.cmd run verify:postgresql` exits 0: clean zero-to-0008 migration, populated accepted
-  0005-to-0008 preservation, second no-op upgrade, two idempotent fixture loads, and 14
+  0005-to-0008 preservation, second no-op upgrade, two idempotent fixture loads, and 18
   PostgreSQL tests pass.
 - Run-004 reviewers reran the PostgreSQL path on isolated database names; clean and
   populated migrations, fixtures, and all 14 PostgreSQL tests passed.
@@ -56,8 +56,11 @@ provider mode, capability status, or authority level.
 - `npm.cmd run audit:dependencies` exits 0 with no known third-party vulnerability; the
   editable local `personal-os` package is explicitly skipped because it is not on PyPI.
 - The demo reports `live_capabilities: []`. The user-authorized empty GitHub destination
-  now contains the unchanged accepted main/tag and candidate branch. GitHub Actions run
-  `31441487067` completed successfully on candidate commit `3ae6d6d325ddeab5b049c737ef4574388c4a4440`.
+  now contains the unchanged accepted main/tag and candidate branch. GitHub Actions runs
+  `31441487067` on `3ae6d6d` and `31444166567` on `5f789ea` completed successfully. The
+  latter exact candidate was still rejected by architecture review after a different-key
+  row-contention probe exposed a transaction-local timeout leak; hosted success is not
+  substituted for acceptance.
 
 ## Quality disposition
 
@@ -80,9 +83,15 @@ demonstrated authority bypass, duplicate effect, corruption, data loss, or lock 
 Active successor run `qg-20260810-persistence-execution-v02-run-005` preserves exact
 run-004 lineage and starts at `[0, 0, 1, 0]` with only that stable failure key. Retained
 iteration 1 adds a 500 ms transaction-local timeout with typed authorized deferral,
-non-enumerating denial, correlated audit, and safe same-key retry after release. Sixteen
-PostgreSQL tests and the complete regression pass, improving the vector to `[0, 0, 0, 0]`.
-The exact committed tree still requires fresh hosted PostgreSQL/full-regression evidence
-and all four independent roles before the v0.2 pass gate. Persistence & Execution
-Foundation v0.2 remains unaccepted. No pilot, production, live-provider, real-data,
-autonomous-specialist, or external-action claim is authorized.
+non-enumerating denial, correlated audit, and safe same-key retry after release. Exact
+candidate `5f789ea` passed hosted CI, but independent architecture review discovered P1
+`recovery-lock-timeout-scope-untranslated-55p03`: the successful key-lock savepoint leaked
+its timeout and later event-row contention escaped without a typed/audited result.
+
+Retained iteration 2 replaces that behavior with one scoped timeout primitive that restores
+the prior setting and bounds both recovery lock points. Eighteen real-PostgreSQL tests and
+the complete regression now pass, returning the derived vector to `[0, 0, 0, 0]`. The
+replacement exact commit still requires hosted PostgreSQL/full-regression evidence and all
+four independent roles before the v0.2 pass gate. Persistence & Execution Foundation v0.2
+remains unaccepted. No pilot, production, live-provider, real-data, autonomous-specialist,
+or external-action claim is authorized.

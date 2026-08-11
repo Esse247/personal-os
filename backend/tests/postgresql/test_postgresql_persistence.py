@@ -1141,6 +1141,129 @@ def test_postgresql_recovery_lock_timeout_is_bounded_audited_and_retryable(
         )
 
 
+def test_postgresql_recovery_lock_timeout_scope_is_restored_after_success(
+    postgresql_engine: Engine,
+) -> None:
+    session_factory = sessionmaker(bind=postgresql_engine, expire_on_commit=False)
+    uow = SqlUnitOfWork(session_factory)
+    with uow:
+        assert uow.session is not None
+        uow.session.scalar(select(func.set_config("lock_timeout", "2s", True)))
+        assert uow.session.scalar(select(func.current_setting("lock_timeout"))) == "2s"
+
+        uow.receipts.lock_key("postgresql-recovery-lock-timeout-scope-0001")
+
+        assert uow.session.scalar(select(func.current_setting("lock_timeout"))) == "2s"
+
+
+def test_postgresql_recovery_row_lock_timeout_is_bounded_audited_and_retryable(
+    postgresql_engine: Engine,
+) -> None:
+    reset_postgresql_outbox(postgresql_engine)
+    factory = create_uow_factory(postgresql_engine)
+    event_id = "postgresql-recovery-row-lock-timeout-event"
+    with factory() as uow:
+        uow.outbox.enqueue(
+            replace(
+                canonical_event(event_id),
+                status=OutboxStatus.FAILED,
+                attempt_count=3,
+                last_failure_code="postgresql-terminal",
+            )
+        )
+        uow.commit()
+
+    command = RecoverOutboxEventCommand(
+        user_id=DEMO_USER_ID,
+        event_id=event_id,
+        reason="Retry after the competing synthetic operator releases the event row.",
+        correlation_id="postgresql-recovery-row-lock-timeout",
+        idempotency_key="postgresql-recovery-row-lock-timeout-0001",
+    )
+    processor = OutboxProcessor(
+        uow_factory=factory,
+        environment="test",
+        instance_id="pg-recovery-row-lock-timeout",
+    )
+
+    with postgresql_engine.connect() as holder:
+        transaction = holder.begin()
+        holder.execute(
+            select(OutboxEventRow).where(OutboxEventRow.id == event_id).with_for_update()
+        )
+        started_at = perf_counter()
+        with pytest.raises(LockTimeoutError, match="temporarily busy"):
+            processor.recover_failed(command)
+        elapsed = perf_counter() - started_at
+        transaction.rollback()
+
+    assert 0.4 <= elapsed < 2.0
+    with postgresql_engine.connect() as connection:
+        assert (
+            connection.execute(
+                select(func.count(CommandReceiptRow.idempotency_key)).where(
+                    CommandReceiptRow.idempotency_key == command.idempotency_key
+                )
+            ).scalar_one()
+            == 0
+        )
+        assert (
+            connection.execute(
+                select(func.count(OutboxTransitionRow.id)).where(
+                    OutboxTransitionRow.event_id == event_id,
+                    OutboxTransitionRow.transition == OutboxTransitionType.RECOVERED.value,
+                )
+            ).scalar_one()
+            == 0
+        )
+        assert (
+            connection.execute(
+                select(OutboxEventRow.status).where(OutboxEventRow.id == event_id)
+            ).scalar_one()
+            == OutboxStatus.FAILED.value
+        )
+        timeout_audit = connection.execute(
+            select(
+                AuditEventRow.action,
+                AuditEventRow.outcome,
+                AuditEventRow.correlation_id,
+                AuditEventRow.policy_result,
+                AuditEventRow.details_json,
+            ).where(
+                AuditEventRow.entity_id == event_id,
+                AuditEventRow.action == "execution.recovery_deferred",
+                AuditEventRow.correlation_id == command.correlation_id,
+            )
+        ).one()
+    assert timeout_audit.action == "execution.recovery_deferred"
+    assert timeout_audit.outcome == "failed"
+    assert timeout_audit.correlation_id == command.correlation_id
+    assert timeout_audit.policy_result == "allowed:execution-owner-recovery-v1"
+    assert '"failure_code": "recovery-lock-timeout"' in timeout_audit.details_json
+
+    recovered = processor.recover_failed(command)
+    assert recovered.status is OutboxStatus.PENDING
+    assert recovered.cycle == 1
+    with postgresql_engine.connect() as connection:
+        assert (
+            connection.execute(
+                select(func.count(CommandReceiptRow.idempotency_key)).where(
+                    CommandReceiptRow.idempotency_key == command.idempotency_key
+                )
+            ).scalar_one()
+            == 1
+        )
+        assert (
+            connection.execute(
+                select(func.count(OutboxTransitionRow.id)).where(
+                    OutboxTransitionRow.event_id == event_id,
+                    OutboxTransitionRow.transition == OutboxTransitionType.RECOVERED.value,
+                )
+            ).scalar_one()
+            == 1
+        )
+
+
 def test_postgresql_recovery_lock_timeout_does_not_disclose_to_wrong_actor(
     postgresql_engine: Engine,
 ) -> None:

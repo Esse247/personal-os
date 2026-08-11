@@ -294,37 +294,7 @@ class OutboxProcessor:
             try:
                 uow.receipts.lock_key(command.idempotency_key)
             except LockTimeoutError as exc:
-                timeout_decision = self.policy.decide(
-                    context,
-                    FoundationPolicy.RECOVER_PERMISSION,
-                    self._resource(event),
-                )
-                if not timeout_decision.allowed:
-                    self._append_audit(
-                        uow,
-                        event,
-                        action="execution.recovery_denied",
-                        outcome="denied",
-                        policy_result=f"denied:{timeout_decision.rule_id}",
-                        actor_id=command.user_id,
-                        failure_code="recovery-authorization-denied",
-                        correlation_id=command.correlation_id,
-                        causation_id=command.idempotency_key,
-                    )
-                    uow.commit()
-                    raise AuthorizationError("resource not found") from exc
-                self._append_audit(
-                    uow,
-                    event,
-                    action="execution.recovery_deferred",
-                    outcome="failed",
-                    policy_result=f"allowed:{timeout_decision.rule_id}",
-                    actor_id=command.user_id,
-                    failure_code="recovery-lock-timeout",
-                    correlation_id=command.correlation_id,
-                    causation_id=command.idempotency_key,
-                )
-                uow.commit()
+                self._record_recovery_lock_timeout(uow, event, command, exc)
                 raise
             decision = self.policy.decide(
                 context,
@@ -360,12 +330,19 @@ class OutboxProcessor:
                     raise ConflictError("idempotency key was already used for a different command")
                 return self._replay_recovery(receipt)
 
-            recovered = uow.outbox.recover(
-                event.id,
-                command.user_id,
-                command.reason,
-                f"allowed:{decision.rule_id}",
-            )
+            try:
+                recovered = uow.outbox.recover(
+                    event.id,
+                    command.user_id,
+                    command.reason,
+                    f"allowed:{decision.rule_id}",
+                )
+            except LockTimeoutError as exc:
+                # The row lock has its own scoped timeout. Reauthorize after that wait
+                # before recording even a deferred outcome, then leave the failed event
+                # and command receipt untouched for a safe exact retry.
+                self._record_recovery_lock_timeout(uow, event, command, exc)
+                raise
             result = self._event_result(recovered)
             uow.receipts.add(
                 CommandReceipt(
@@ -655,6 +632,49 @@ class OutboxProcessor:
                 details={},
             )
         )
+
+    def _record_recovery_lock_timeout(
+        self,
+        uow: UnitOfWork,
+        event: OutboxEvent,
+        command: RecoverOutboxEventCommand,
+        cause: LockTimeoutError,
+    ) -> None:
+        timeout_decision = self.policy.decide(
+            AuthContext(
+                command.user_id,
+                "recover failed internal event",
+                environment=self.environment,
+            ),
+            FoundationPolicy.RECOVER_PERMISSION,
+            self._resource(event),
+        )
+        if not timeout_decision.allowed:
+            self._append_audit(
+                uow,
+                event,
+                action="execution.recovery_denied",
+                outcome="denied",
+                policy_result=f"denied:{timeout_decision.rule_id}",
+                actor_id=command.user_id,
+                failure_code="recovery-authorization-denied",
+                correlation_id=command.correlation_id,
+                causation_id=command.idempotency_key,
+            )
+            uow.commit()
+            raise AuthorizationError("resource not found") from cause
+        self._append_audit(
+            uow,
+            event,
+            action="execution.recovery_deferred",
+            outcome="failed",
+            policy_result=f"allowed:{timeout_decision.rule_id}",
+            actor_id=command.user_id,
+            failure_code="recovery-lock-timeout",
+            correlation_id=command.correlation_id,
+            causation_id=command.idempotency_key,
+        )
+        uow.commit()
 
     @staticmethod
     def _resource(event: OutboxEvent) -> ResourceRef:

@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from sqlalchemy import Engine, and_, desc, func, or_, select, text, update
+from sqlalchemy import Engine, and_, desc, func, or_, select, update
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -45,6 +45,7 @@ from personal_os.domain.entities import (
     TransactionClassification,
     WorldFact,
 )
+from personal_os.domain.errors import LockTimeoutError
 from personal_os.domain.events import (
     ConsumerReceipt,
     InternalEffect,
@@ -73,6 +74,38 @@ from personal_os.ports.repositories import (
     UnitOfWork,
     WorldFactRepository,
 )
+
+RECOVERY_LOCK_TIMEOUT_MS = 500
+
+
+def _run_with_scoped_postgresql_lock_timeout[T](
+    session: Session,
+    operation: Callable[[], T],
+) -> T:
+    """Run one PostgreSQL lock operation with a bounded, non-leaking timeout."""
+    previous_timeout = session.scalar(select(func.current_setting("lock_timeout")))
+    if not isinstance(previous_timeout, str):  # pragma: no cover - PostgreSQL contract
+        raise RuntimeError("database lock timeout setting is unavailable")
+    try:
+        with session.begin_nested():
+            session.scalar(
+                select(
+                    func.set_config(
+                        "lock_timeout",
+                        f"{RECOVERY_LOCK_TIMEOUT_MS}ms",
+                        True,
+                    )
+                )
+            )
+            result = operation()
+            # SET LOCAL inside a released savepoint otherwise survives for the outer
+            # transaction. Restore the exact prior value before releasing it.
+            session.scalar(select(func.set_config("lock_timeout", previous_timeout, True)))
+            return result
+    except DBAPIError as exc:
+        if getattr(exc.orig, "sqlstate", None) == "55P03":
+            raise LockTimeoutError("recovery command is temporarily busy; retry") from exc
+        raise
 
 
 def aware(value: datetime | None) -> datetime | None:
@@ -347,8 +380,6 @@ class SqlBlockRepository:
 
 
 class SqlCommandReceiptRepository:
-    LOCK_TIMEOUT_MS = 500
-
     def __init__(self, session: Session) -> None:
         self.session = session
 
@@ -391,22 +422,12 @@ class SqlCommandReceiptRepository:
         if not idempotency_key.strip():
             raise ValueError("idempotency key cannot be empty")
         if self.session.get_bind().dialect.name == "postgresql":
-            try:
-                with self.session.begin_nested():
-                    self.session.execute(
-                        text(f"SET LOCAL lock_timeout = '{self.LOCK_TIMEOUT_MS}ms'")
-                    )
-                    self.session.execute(
-                        select(
-                            func.pg_advisory_xact_lock(func.hashtextextended(idempotency_key, 1))
-                        )
-                    )
-            except DBAPIError as exc:
-                if getattr(exc.orig, "sqlstate", None) == "55P03":
-                    from personal_os.domain.errors import LockTimeoutError
-
-                    raise LockTimeoutError("recovery command is temporarily busy; retry") from exc
-                raise
+            _run_with_scoped_postgresql_lock_timeout(
+                self.session,
+                lambda: self.session.execute(
+                    select(func.pg_advisory_xact_lock(func.hashtextextended(idempotency_key, 1)))
+                ),
+            )
 
 
 class SqlApprovalRepository:
@@ -1003,8 +1024,12 @@ class SqlOutboxRepository:
             raise ValueError("recovery requires an actor and a 1-240 character reason")
         statement = select(OutboxEventRow).where(OutboxEventRow.id == event_id)
         if self.session.get_bind().dialect.name == "postgresql":
-            statement = statement.with_for_update()
-        row = self.session.scalar(statement)
+            row = _run_with_scoped_postgresql_lock_timeout(
+                self.session,
+                lambda: self.session.scalar(statement.with_for_update()),
+            )
+        else:
+            row = self.session.scalar(statement)
         if row is None or row.status != OutboxStatus.FAILED.value:
             raise ConflictError("only failed outbox work can be recovered")
         now = self._database_now()

@@ -119,6 +119,62 @@ iterations:
           Safety over 172 candidates, lint, strict types, 76 backend unit tests, one
           frontend test, 38 integration tests, build, validators, continuity, and demos
           passed in 30.7 seconds with live_capabilities empty.
+  - number: 2
+    primary_failure_id: PE-F-012
+    repair:
+      author_id: root-builder
+      summary: >-
+        Replaced the leaking transaction-local timeout with a reusable scoped PostgreSQL
+        lock operation that restores the exact prior setting after success and translates
+        SQLSTATE 55P03 after savepoint rollback. Applied it to both advisory-key and event-row
+        recovery locks, with fresh authorization, correlated deferral audit, zero partial
+        writes, and safe retry for either contention point.
+      references:
+        - backend/src/personal_os/adapters/persistence/repositories.py
+        - backend/src/personal_os/worker.py
+        - backend/tests/postgresql/test_postgresql_persistence.py
+        - docs/EVIDENCE.md
+    before:
+      quality_vector: [0, 1, 0, 0]
+      evidence: >-
+        Exact candidate 5f789ea restored no timeout after a successful advisory lock.
+        A different-key recovery blocked on the event row, raised raw SQLAlchemy
+        OperationalError/SQLSTATE 55P03 after about 0.545 seconds, and recorded no audit.
+    after:
+      quality_vector: [0, 0, 0, 0]
+      evidence: >-
+        PostgreSQL proves the prior timeout is restored after a successful key lock and a
+        separately held event row produces a bounded typed conflict, correlated authorized
+        deferral, no receipt/transition/state mutation, and successful exact retry.
+    assessment: IMPROVED
+    kept: true
+    targeted_checks:
+      - criterion_id: CAP-007
+        command: npm.cmd run verify:postgresql
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Clean zero-to-0008, populated accepted-0005-to-0008, repeat migration, two
+          fixture loads, and all eighteen PostgreSQL tests passed in 15.9 seconds.
+      - criterion_id: CAP-007
+        command: npm.cmd run test:execution
+        exit_code: 0
+        result: PASS
+        evidence: Nineteen local execution scenarios remain green.
+      - criterion_id: CAP-009
+        command: npm.cmd run test:dialect-boundaries
+        exit_code: 0
+        result: PASS
+        evidence: Eight PostgreSQL/SQLite dialect-boundary checks remain green.
+    regression_checks:
+      - criterion_id: REG-001
+        command: npm.cmd run verify
+        exit_code: 0
+        result: PASS
+        evidence: >-
+          Safety over 172 candidates, lint, strict types, 76 backend unit tests, one
+          frontend test, 38 integration tests, build, validators, continuity, and demos
+          passed in 33 seconds with live_capabilities empty.
 final_checks: []
 reviewers: []
 failures:
@@ -138,6 +194,23 @@ failures:
       becomes a typed conflict only after current authorization, with correlated audit and
       no receipt/transition; release permits safe retry with the same key.
     risk_tags: [architecture, agent-autonomy]
+  - id: PE-F-012
+    failure_key: recovery-lock-timeout-scope-untranslated-55p03
+    discovered_iteration: 2
+    criterion_ids: [CAP-007]
+    severity: P1
+    status: RESOLVED
+    attempts: 1
+    resolved_iteration: 2
+    summary: >-
+      A successful advisory-lock savepoint leaked its 500 ms transaction-local timeout.
+      Later same-event row contention under a different key escaped as raw SQLSTATE 55P03
+      without the required typed result or correlated failure audit.
+    resolution: >-
+      One scoped lock helper now snapshots and restores the exact prior timeout and bounds
+      both recovery lock points. Row contention rolls back only its savepoint, reauthorizes,
+      commits the correlated deferral audit, preserves failed state, and permits safe retry.
+    risk_tags: [architecture, agent-autonomy, side-effects]
 remaining_risks: []
 final_disposition: null
 completed_at: null
