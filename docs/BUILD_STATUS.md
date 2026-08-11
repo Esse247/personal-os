@@ -1,7 +1,7 @@
 # Build status
 
 - **Current phase:** Persistence & Execution Foundation v0.2
-- **Status:** Successor Quality Gauntlet run 005 active; v0.2 is not accepted
+- **Status:** Independently accepted; Quality Gauntlet run 005 is `COMPLETE / PASS`
 - **Accepted capability baseline:** Foundation v0.1 at `foundation-v0.1-accepted`
 - **Capability mode:** Local, mock-only, synthetic-data-only; no live capability
 - **Last updated:** 2026-08-11
@@ -43,8 +43,8 @@ provider mode, capability status, or authority level.
 - `npm.cmd run verify:postgresql` exits 0: clean zero-to-0008 migration, populated accepted
   0005-to-0008 preservation, second no-op upgrade, two idempotent fixture loads, and 18
   PostgreSQL tests pass.
-- Run-004 reviewers reran the PostgreSQL path on isolated database names; clean and
-  populated migrations, fixtures, and all 14 PostgreSQL tests passed.
+- Run-005 reviewers reran isolated clean/populated PostgreSQL paths and all 18 tests;
+  concurrency additionally passed five freshly recreated 13-case stress rounds (65/65).
 - `npm.cmd run verify` exits 0: repository safety, Ruff/ESLint, strict Python/TypeScript,
   76 backend unit tests, one frontend test, 38 SQLite integration tests, production build,
   CI-contract/quality/continuity validators, and both mock/synthetic demo flows pass.
@@ -61,37 +61,30 @@ provider mode, capability status, or authority level.
   latter exact candidate was still rejected by architecture review after a different-key
   row-contention probe exposed a transaction-local timeout leak; hosted success is not
   substituted for acceptance.
+- GitHub Actions run `31445219880`, job `93637847953`, completed successfully on accepted
+  code candidate `e5fecd68ce9a6a54e7c7367e27aaf52d389d73ed`: PostgreSQL 17,
+  CI-contract validation, the strict verifier, full regression, cleanup, and service stop
+  all passed.
 
 ## Quality disposition
 
-Runs 002, 003, and 004 are frozen `COMPLETE / ESCALATE`, never PASS. Run 004 used its
-fixed three repairs to resolve actual hosted CI, truthful preauthorization history, and
-handler-envelope binding. Its vector improved from `[0, 1, 3, 0]` to `[0, 0, 1, 0]`.
+Runs 002, 003, and 004 remain frozen `COMPLETE / ESCALATE`, never relabeled. Successor run
+`qg-20260810-persistence-execution-v02-run-005` preserves their lineage and is now
+`COMPLETE / PASS`. Iteration 1 resolved the carried unbounded-wait P2. Exact candidate
+`5f789ea` then passed hosted CI but was truthfully rejected when architecture review found
+P1 `recovery-lock-timeout-scope-untranslated-55p03`. Retained iteration 2 restored the
+prior timeout, bounded both recovery lock points, reauthorized after waits, preserved audit
+and retry semantics, and returned the derived vector from `[0, 1, 0, 0]` to `[0, 0, 0, 0]`.
 
-Run-004 independent decisions are:
+Final run-005 decisions are all ACCEPT with no P0/P1/P2 finding:
 
-- persistence architecture: ACCEPT, no P0/P1;
-- concurrency and reliability: ACCEPT, no P0/P1;
-- security and authorization: ACCEPT, no P0/P1;
-- final milestone acceptance: REJECT and ESCALATE.
+- persistence architecture: `faraday-persistence-architecture-r005-20260811-0218-b4d2`;
+- concurrency and reliability: `concurrency-reliability-r005-20260811-e5fecd6-a7c19b`;
+- security and authorization: `security-authorization-r5-final-20260811-0118`;
+- milestone acceptance: `milestone-acceptance-r005-20260811-0125-e5fecd6`.
 
-The sole blocker is P2 `recovery-advisory-lock-unbounded-wait`, tied to mandatory CAP-007.
-PostgreSQL reports `lock_timeout=0`, and an independent waiter remained blocked until its
-holder released the advisory lock. This is an availability/recovery-latency risk, not a
-demonstrated authority bypass, duplicate effect, corruption, data loss, or lock cycle.
-
-Active successor run `qg-20260810-persistence-execution-v02-run-005` preserves exact
-run-004 lineage and starts at `[0, 0, 1, 0]` with only that stable failure key. Retained
-iteration 1 adds a 500 ms transaction-local timeout with typed authorized deferral,
-non-enumerating denial, correlated audit, and safe same-key retry after release. Exact
-candidate `5f789ea` passed hosted CI, but independent architecture review discovered P1
-`recovery-lock-timeout-scope-untranslated-55p03`: the successful key-lock savepoint leaked
-its timeout and later event-row contention escaped without a typed/audited result.
-
-Retained iteration 2 replaces that behavior with one scoped timeout primitive that restores
-the prior setting and bounds both recovery lock points. Eighteen real-PostgreSQL tests and
-the complete regression now pass, returning the derived vector to `[0, 0, 0, 0]`. The
-replacement exact commit still requires hosted PostgreSQL/full-regression evidence and all
-four independent roles before the v0.2 pass gate. Persistence & Execution Foundation v0.2
-remains unaccepted. No pilot, production, live-provider, real-data, autonomous-specialist,
-or external-action claim is authorized.
+Every CAP-001 through CAP-010 and REG-001 through REG-005 criterion passes. The named
+Quality Gauntlet pass gate and reconciled continuity gate are the authoritative completion
+checks. Persistence & Execution Foundation v0.2 is accepted only for its documented
+localhost, mock-only, synthetic-data scope. No pilot, production, live-provider, real-data,
+autonomous-specialist, or external-action claim is authorized.

@@ -7,7 +7,7 @@ deferred with an explicit evidence-based rationale.
 
 - [x] Accepted Foundation v0.1 tag and complete regression baseline recovered.
 - [x] Pre-implementation Quality Gauntlet contract is fixed and SHA-256 bound.
-- [x] Active successor run 005 preserves run-004 lineage and the sole unresolved stable failure key.
+- [x] Completed successor run 005 preserves run-004 lineage and resolves every carried or discovered stable failure key.
 - [x] ADRs 0012 and 0013 fix PostgreSQL, event, authority, and delivery boundaries.
 
 ## PostgreSQL reference path
@@ -59,15 +59,16 @@ deferred with an explicit evidence-based rationale.
   no P0/P1 finding in their scopes.
 - [x] Run-004 architecture, concurrency/reliability, and security reviewers accept with no
   P0/P1 finding and independently accept the handler-envelope repair.
-- [~] Run-004 milestone reviewer rejects and escalates solely because mandatory CAP-007
-  retains the lock-timeout P2 after budget exhaustion; v0.2 is not accepted.
-- [~] Run-005 P1 `recovery-lock-timeout-scope-untranslated-55p03` is resolved by retained
-  iteration 2 locally and on real PostgreSQL; replacement exact-SHA review remains pending.
+- [x] Run-004 milestone rejection/escalation remains immutable evidence of the mandatory
+  CAP-007 lock-timeout P2 rather than being rewritten by successor success.
+- [x] Run-005 P1 `recovery-lock-timeout-scope-untranslated-55p03` is resolved by retained
+  iteration 2 and accepted on exact SHA by architecture, concurrency, security, and milestone reviewers.
 - [x] GitHub destination and explicit commit/remote/push/Actions authority are recorded;
-  hosted run 31441487067 is authentic and final repaired-tree hosting remains pending.
+  hosted run 31445219880 is authentic exact-SHA repaired-tree evidence.
 - [x] Manifest, ADRs, architecture/security docs, risks, status, evidence, and handoff agree.
-- [~] Fresh hosted execution of the iteration-2 exact repaired commit and final run-005 independent
-  acceptance/pass-gate evidence remain pending.
+- [x] Fresh hosted execution and all four independent run-005 acceptance roles pass with
+  no P0/P1/P2 finding.
+- [x] Final continuity and named Quality Gauntlet `--require-pass` execution exit 0.
 
 ## Product North Star boundary
 

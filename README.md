@@ -2,7 +2,7 @@
 
 PERSONAL OS is a private, proactive, model-agnostic personal and household operating-system
 foundation. Foundation v0.1 remains the independently accepted product baseline. The
-active v0.2 phase adds PostgreSQL production semantics and bounded durable internal event
+accepted v0.2 phase adds PostgreSQL production semantics and bounded durable internal event
 delivery; all people, calendar data, transactions, providers, and actions remain synthetic,
 mocked, or local-only.
 

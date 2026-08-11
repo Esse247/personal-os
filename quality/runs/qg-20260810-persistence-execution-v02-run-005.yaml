@@ -9,11 +9,11 @@ goal: >-
   while preserving every accepted Foundation v0.1 invariant.
 milestone: foundation-v0.2-persistence-execution
 started_at: "2026-08-10T23:44:00Z"
-status: ACTIVE
+status: COMPLETE
 builder_ids:
   - root-builder
-repository_revision: 3ae6d6d325ddeab5b049c737ef4574388c4a4440
-workspace_state: uncommitted
+repository_revision: e5fecd68ce9a6a54e7c7367e27aaf52d389d73ed
+workspace_state: committed
 lineage:
   predecessor_run_id: qg-20260810-persistence-execution-v02-run-004
   predecessor_contract_id: qg-20260810-persistence-execution-v02
@@ -175,8 +175,159 @@ iterations:
           Safety over 172 candidates, lint, strict types, 76 backend unit tests, one
           frontend test, 38 integration tests, build, validators, continuity, and demos
           passed in 33 seconds with live_capabilities empty.
-final_checks: []
-reviewers: []
+final_checks:
+  - criterion_id: CAP-001
+    command: npm.cmd run verify:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Clean zero-to-0008, populated accepted-0005-to-0008, repeat migration, two fixtures, and 18 PostgreSQL tests passed.
+  - criterion_id: CAP-002
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: PostgreSQL atomic rollback cases retain no partial state, audit, receipt, approval, block, effect, or outbox write.
+  - criterion_id: CAP-003
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: CAS, overlap, approval, claim, fencing, lock-timeout, and recovery races retain controlled one-winner outcomes.
+  - criterion_id: CAP-004
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Exact retry, mutated-key conflict, concurrent replay, receipts, claims, and duplicate delivery retain one authoritative result/effect.
+  - criterion_id: CAP-005
+    command: npm.cmd run test:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Isolation, provenance, immutable audit, approval, denial, wrong-actor, idempotency, and revoked replay tests pass.
+  - criterion_id: CAP-006
+    command: npm.cmd run test:execution
+    exit_code: 0
+    result: PASS
+    evidence: Nineteen transactional enqueue, rollback, delivery, handler-binding, receipt, and audit scenarios pass.
+  - criterion_id: CAP-007
+    command: npm.cmd run verify:postgresql
+    exit_code: 0
+    result: PASS
+    evidence: Bounded retry/failure/recovery and both scoped lock paths are typed, freshly authorized, audited, partial-write-free, and retryable.
+  - criterion_id: CAP-008
+    command: npm.cmd run test:execution
+    exit_code: 0
+    result: PASS
+    evidence: Crash/restart reclaim, lease expiry, stale fencing, and duplicate suppression preserve one eventual internal effect.
+  - criterion_id: CAP-009
+    command: npm.cmd run test:dialect-boundaries
+    exit_code: 0
+    result: PASS
+    evidence: Eight dialect checks preserve explicit PostgreSQL production semantics and the lightweight SQLite test path.
+  - criterion_id: CAP-010
+    command: GitHub Actions run 31445219880
+    exit_code: 0
+    result: PASS
+    evidence: Hosted PostgreSQL initialization, strict verifier, full regression, cleanup, and service stop succeeded on exact SHA e5fecd68ce9a6a54e7c7367e27aaf52d389d73ed.
+  - criterion_id: REG-001
+    command: npm.cmd run verify
+    exit_code: 0
+    result: PASS
+    evidence: The complete accepted Foundation regression and v0.2 structural gates pass.
+  - criterion_id: REG-002
+    command: npm.cmd run demo:verify
+    exit_code: 0
+    result: PASS
+    evidence: Both deterministic mock/synthetic flows pass with live_capabilities empty.
+  - criterion_id: REG-003
+    command: npm.cmd run test:integration
+    exit_code: 0
+    result: PASS
+    evidence: Thirty-eight explicitly lightweight SQLite integration tests pass independently.
+  - criterion_id: REG-004
+    command: npm.cmd run test:unit
+    exit_code: 0
+    result: PASS
+    evidence: Seventy-six backend unit tests and one frontend test pass.
+  - criterion_id: REG-005
+    command: npm.cmd run validate:continuity
+    exit_code: 0
+    result: PASS
+    evidence: Manifest, status, evidence, checklist, risks, handoff, ADRs, and links reconcile.
+  - criterion_id: REV-001
+    command: null
+    exit_code: null
+    result: PASS
+    evidence: Independent persistence-architecture review accepts with no P0/P1/P2 finding.
+  - criterion_id: REV-002
+    command: null
+    exit_code: null
+    result: PASS
+    evidence: Independent concurrency/reliability review accepts with no P0/P1/P2 finding.
+  - criterion_id: REV-003
+    command: null
+    exit_code: null
+    result: PASS
+    evidence: Independent security/authorization review accepts with no P0/P1/P2 finding.
+  - criterion_id: REV-004
+    command: null
+    exit_code: null
+    result: PASS
+    evidence: Independent milestone review accepts every Success Contract criterion and supports PASS.
+reviewers:
+  - reviewer_id: faraday-persistence-architecture-r005-20260811-0218-b4d2
+    role: persistence-architecture
+    independent: true
+    disposition: ACCEPT
+    evidence: >-
+      Exact-SHA isolated PostgreSQL and full regression pass. Independent key/row probes
+      preserve the prior timeout, produce typed audited deferral with no partial write,
+      and succeed after release. No P0/P1/P2 architecture finding remains.
+    evidence_refs:
+      - backend/src/personal_os/adapters/persistence/repositories.py
+      - backend/src/personal_os/worker.py
+      - backend/tests/postgresql/test_postgresql_persistence.py
+      - docs/decisions/0013-canonical-events-and-fenced-execution.md
+    risk_tags_reviewed: [architecture, security, permissions, data-access, agent-autonomy, side-effects]
+  - reviewer_id: concurrency-reliability-r005-20260811-e5fecd6-a7c19b
+    role: concurrency-reliability
+    independent: true
+    disposition: ACCEPT
+    evidence: >-
+      Five freshly recreated PostgreSQL stress rounds pass 65 of 65 cases. Advisory and
+      row contention, replay, fencing, expiry, restart, CAS, retry exhaustion, and dedup
+      preserve exact invariants with no P0/P1/P2 finding.
+    evidence_refs:
+      - backend/src/personal_os/adapters/persistence/repositories.py
+      - backend/src/personal_os/worker.py
+      - backend/tests/postgresql/test_postgresql_persistence.py
+    risk_tags_reviewed: [architecture, agent-autonomy, side-effects]
+  - reviewer_id: security-authorization-r5-final-20260811-0118
+    role: security-authorization
+    independent: true
+    disposition: ACCEPT
+    evidence: >-
+      Post-wait authority revocation on both lock paths remains non-enumerating and writes
+      only correlated denial audit, with no receipt, transition, effect, or result disclosure.
+      Replay, isolation, provenance, handler binding, credential, and no-live boundaries
+      pass with no P0/P1/P2 finding.
+    evidence_refs:
+      - backend/src/personal_os/worker.py
+      - backend/tests/postgresql/test_postgresql_persistence.py
+      - docs/AUTONOMY_AND_APPROVALS.md
+      - docs/SECURITY_PRIVACY_THREAT_MODEL.md
+    risk_tags_reviewed: [security, permissions, data-access, agent-autonomy, side-effects, architecture]
+  - reviewer_id: milestone-acceptance-r005-20260811-0125-e5fecd6
+    role: milestone-acceptance
+    independent: true
+    disposition: ACCEPT
+    evidence: >-
+      Every CAP-001 through CAP-010 and REG-001 through REG-005 criterion passes; all
+      technical reviews accept; exact hosted PostgreSQL evidence is authentic; accepted
+      v0.1 migrations/ADRs and mock-only capability truth remain unchanged. PASS is supported.
+    evidence_refs:
+      - quality/contracts/qg-20260810-persistence-execution-v02.yaml
+      - quality/runs/qg-20260810-persistence-execution-v02-run-005.yaml
+      - docs/EVIDENCE.md
+      - docs/HANDOFF.md
+    risk_tags_reviewed: [architecture, security, permissions, data-access, agent-autonomy, side-effects]
 failures:
   - id: PE-F-011
     failure_key: recovery-advisory-lock-unbounded-wait
@@ -212,5 +363,14 @@ failures:
       commits the correlated deferral audit, preserves failed state, and permits safe retry.
     risk_tags: [architecture, agent-autonomy, side-effects]
 remaining_risks: []
-final_disposition: null
-completed_at: null
+continuity:
+  evidence_ref: docs/EVIDENCE.md
+  evidence_status: RECONCILED
+  build_status_ref: docs/BUILD_STATUS.md
+  build_status_status: RECONCILED
+  handoff_ref: docs/HANDOFF.md
+  handoff_status: RECONCILED
+  checklist_ref: checklists/PERSISTENCE_EXECUTION_V0_2.md
+  checklist_status: RECONCILED
+final_disposition: PASS
+completed_at: "2026-08-11T00:27:28Z"

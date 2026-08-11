@@ -316,3 +316,24 @@ provider/capability mode, authority, product behavior, or v0.2 scope.
 | `npm.cmd run audit:dependencies` | 0 | Pip-audit and npm audit found zero known third-party vulnerabilities; the editable local `personal-os` package was explicitly skipped because it is not on PyPI. |
 | Current-tree `npm.cmd run verify` | 0 | In 33 seconds, repository safety over 172 candidates, lint, strict types, 76 backend unit tests, one frontend test, 38 integration tests, production build, CI/quality/continuity validators, and mock/synthetic demos passed; `live_capabilities` is empty. |
 | Run-005 iteration 2 | retained | Derived vector improves from `[0, 1, 0, 0]` to `[0, 0, 0, 0]`. Fresh hosted execution and all four independent roles are still required on the replacement exact commit; v0.2 remains unaccepted. |
+
+## 2026-08-11 - Persistence & Execution Foundation v0.2 final acceptance
+
+Exact code candidate `e5fecd68ce9a6a54e7c7367e27aaf52d389d73ed` preserves the
+fixed contract hash, accepted Foundation v0.1 baseline, migrations, ADRs, provider mode,
+and capability truth. Hosted execution and all four author-independent roles accept it.
+Quality run `qg-20260810-persistence-execution-v02-run-005` completes with `PASS`, while
+runs 002 through 004 remain immutable `ESCALATE` history.
+
+| Command, review, or record | Exit/result | Material evidence |
+|---|---:|---|
+| [GitHub Actions run 31445219880](https://github.com/Esse247/personal-os/actions/runs/31445219880), job 93637847953 | success | Push attempt 1 completed on exact SHA `e5fecd68ce9a6a54e7c7367e27aaf52d389d73ed`; PostgreSQL 17 initialization, CI contract, strict 18-test PostgreSQL verifier, full regression, cleanup, and service stop all succeeded. |
+| REV-001 `faraday-persistence-architecture-r005-20260811-0218-b4d2` | ACCEPT | Isolated clean/populated PostgreSQL and full verification pass. Independent advisory and row probes restore `2s` to `2s`, time out as typed/audited conflicts near 0.5 seconds, write no partial result, and succeed after release. P0/P1/P2: none. |
+| REV-002 `concurrency-reliability-r005-20260811-e5fecd6-a7c19b` | ACCEPT | Five freshly recreated PostgreSQL stress rounds pass 65/65. Replay, contention, fencing, expiry, restart, CAS, retry exhaustion, deduplication, and single-result/effect invariants pass. P0/P1/P2: none. |
+| REV-003 `security-authorization-r5-final-20260811-0118` | ACCEPT | Post-wait authority revocation on both lock paths is non-enumerating and produces only correlated denial audit with zero receipt, transition, effect, state mutation, or result disclosure. Replay/isolation/provenance/credential/no-live boundaries pass. P0/P1/P2: none. |
+| REV-004 `milestone-acceptance-r005-20260811-0125-e5fecd6` | ACCEPT | Every CAP-001 through CAP-010 and REG-001 through REG-005 criterion passes; the three technical reviews accept; v0.1 main/tag and accepted migrations/ADRs are unchanged; `live_capabilities` is empty. Overall PASS is supported. |
+| Run-005 completion record | `COMPLETE / PASS` | PE-F-011 and PE-F-012 are resolved, all final checks pass, all required independent reviewers accept, remaining risks are empty, and the final derived vector is `[0, 0, 0, 0]`. |
+| Accepted scope | bounded | Persistence & Execution Foundation v0.2 is accepted only for localhost, mock-only, synthetic-only PostgreSQL/SQLite and internal execution behavior. No pilot, production auth, live provider, real data, external action, specialist runtime, or continuous model loop is claimed. |
+| `npm.cmd run validate:continuity` after reconciliation | 0 | Manifest status, completed run, build status, evidence, checklist, risks, handoff, ADRs, and links reconcile. |
+| `npm.cmd run validate:quality -- --require-pass qg-20260810-persistence-execution-v02-run-005` | 0 | The validator derives acceptance from the fixed contract, mandatory final checks, resolved failure lifecycle, four independent ACCEPT decisions, zero remaining risks, and reconciled continuity; it reports `Quality acceptance passed`. |
+| Final reconciled `npm.cmd run verify` | 0 | Safety over 172 candidates, lint/format, strict types, 76 backend unit tests, one frontend test, 38 integration tests, production build, PostgreSQL CI contract, quality/continuity validators, and mock/synthetic demos all pass; `live_capabilities` remains empty. |

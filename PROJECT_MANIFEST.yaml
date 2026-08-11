@@ -3,7 +3,7 @@ project:
   name: PERSONAL OS
   phase: foundation-v0.2-persistence-execution
   phase_label: Persistence & Execution Foundation v0.2
-  status: in_progress
+  status: accepted
   data_mode: synthetic_only
   integration_mode: mock_only
   default_bind_host: 127.0.0.1

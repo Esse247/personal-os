@@ -4,9 +4,16 @@
 
 Continuity system, architecture/security/domain contracts, mock-only vertical demonstration, typed API, responsive dashboard, persistence/migrations, synthetic fixtures, and independent evidence-backed verification.
 
-## Foundation v0.2 — next: hardening
+## Foundation v0.2 — complete
 
-First establish PostgreSQL-first CI for migrations, fixtures, persistence, and concurrency. Then address production-grade identity/authorization design, explicit consent-grant lifecycle, transactional outbox/worker reliability, generated API client, browser automation, accessibility audit, retention/deletion design, deprecation removal, and expanded schedule property tests.
+PostgreSQL-first CI now verifies clean and populated migrations, fixtures, persistence,
+concurrency, and the accepted Foundation regressions. The bounded transactional outbox and
+worker substrate provides canonical redacted events, fenced leases, idempotent internal
+effects, visible failure, explicit authorized recovery, and append-only execution history.
+
+Production identity/authorization, explicit consent-grant lifecycle, generated API clients,
+browser automation, accessibility, retention/deletion, deprecation removal, and expanded
+property tests remain separately scoped future work rather than implied v0.2 capability.
 
 ## Pilot v0.3 — consented read-only integrations
 
